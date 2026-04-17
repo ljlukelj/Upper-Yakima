@@ -664,13 +664,15 @@
       <div class="stat-value"><span class="skeleton" id="gage-val">0.00</span><span class="stat-unit">ft</span></div>
       <div class="stat-delta" id="gage-note">Umtanum, WA</div>
     </div>
-    <div class="stat-card" id="card-temp">
-      <div class="stat-label" style="display:flex;align-items:center;justify-content:space-between">
-        Ideal Rig Now
+    <div class="stat-card" id="card-temp" style="grid-column: span 2;">
+      <div class="stat-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        Recommended Setups
         <span style="font-family:'IBM Plex Mono',monospace;font-size:0.5rem;background:rgba(125,211,252,0.1);color:var(--accent);border:1px solid rgba(125,211,252,0.3);padding:1px 6px;border-radius:2px;letter-spacing:0.1em">AI</span>
       </div>
-      <div class="stat-value" style="font-size:1.1rem;line-height:1.3" id="temp-val">--</div>
-      <div class="stat-delta" id="temp-note">—</div>
+      <div id="rig-setups" style="display:flex;flex-direction:column;gap:8px">
+        <div id="temp-val" style="color:var(--muted);font-size:0.8rem;font-family:'IBM Plex Mono',monospace">asking Claude…</div>
+      </div>
+      <div id="temp-note" style="display:none"></div>
     </div>
     <div class="stat-card" id="card-wtemp">
       <div class="stat-label">Air Temp</div>
@@ -887,10 +889,6 @@ async function fetchUSGS() {
     document.getElementById('card-gage').classList.add('loaded');
   }
 
-  // No water temp sensor on this gauge
-  document.getElementById('temp-val').textContent = 'N/A';
-  document.getElementById('temp-val').classList.remove('skeleton');
-  document.getElementById('temp-note').textContent = 'No sensor at this gauge';
 
   updateWading();
   updateConditionBanner();
@@ -1203,16 +1201,12 @@ Write in a confident, direct guide voice. Be specific — mention actual fly pat
 
 // ─── RIG RECOMMENDATION (AI-powered) ─────────────────────
 async function fetchWaterTemp() {
-  const el   = document.getElementById('temp-val');
-  const note = document.getElementById('temp-note');
+  const container = document.getElementById('rig-setups');
 
-  el.textContent = '…';
-  el.classList.add('skeleton');
-
-  const flow    = currentFlow  ? `${Math.round(currentFlow)} cfs`    : 'unknown';
-  const gage    = currentGage  ? `${currentGage.toFixed(2)} ft`       : 'unknown';
-  const wTemp   = currentWaterTemp ? `${currentWaterTemp}°F`          : 'unavailable';
-  const aTemp   = airTemp      ? `${Math.round(airTemp)}°F`           : 'unknown';
+  const flow    = currentFlow  ? `${Math.round(currentFlow)} cfs`  : 'unknown';
+  const gage    = currentGage  ? `${currentGage.toFixed(2)} ft`    : 'unknown';
+  const wTemp   = currentWaterTemp ? `${currentWaterTemp}°F`        : 'unavailable';
+  const aTemp   = airTemp      ? `${Math.round(airTemp)}°F`         : 'unknown';
   const hour    = new Date().getHours();
   const timeOfDay = hour < 6 ? 'pre-dawn' : hour < 10 ? 'morning' : hour < 14 ? 'midday' : hour < 18 ? 'afternoon' : 'evening';
   const month   = new Date().toLocaleString('en-US', { month: 'long' });
@@ -1229,14 +1223,20 @@ Current conditions right now:
 - Month: ${month}
 - Active hatches: ${hatches}
 
-Respond with ONLY a JSON object — no markdown, no explanation, just raw JSON — in this exact shape:
-{
-  "rig": "<short rig name, e.g. 'Hopper-Dropper' or 'Midge Nymph' — max 4 words>",
-  "emoji": "<single most relevant emoji>",
-  "detail": "<one punchy sentence: specific fly pattern(s) with sizes and ONE key tip — max 18 words>"
-}
+Give 2-3 distinct setup options ranked best to worst for these exact conditions. Each should be a genuinely different approach (e.g. nymph rig vs dry fly vs streamer — not two nymph rigs).
 
-Base your pick entirely on the live conditions above. Be specific with pattern names and hook sizes.`;
+Respond with ONLY a JSON array — no markdown, no explanation — in this exact shape:
+[
+  {
+    "rank": 1,
+    "rig": "<setup name, max 4 words>",
+    "emoji": "<single emoji>",
+    "flies": "<specific pattern names with hook sizes>",
+    "tip": "<one key tactical tip for these conditions, max 12 words>"
+  }
+]
+
+Be specific. Use real Upper Yakima patterns. Base everything on the live conditions.`;
 
   try {
     const res = await fetch('https://yakima-proxy.ljlukelj.workers.dev/ai', {
@@ -1244,32 +1244,63 @@ Base your pick entirely on the live conditions above. Be specific with pattern n
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 120,
+        max_tokens: 400,
         messages: [{ role: 'user', content: prompt }]
       })
     });
 
     const data = await res.json();
-    const text = (data.content?.[0]?.text || '').trim().replace(/```json|```/g, '');
-    const rec  = JSON.parse(text);
+    const text = (data.content?.[0]?.text || '').trim().replace(/```json|```/g, '').trim();
+    const setups = JSON.parse(text);
 
-    el.textContent = `${rec.emoji} ${rec.rig}`;
-    el.classList.remove('skeleton');
-    note.textContent = rec.detail;
-    note.className = 'stat-delta neutral';
+    container.innerHTML = setups.map((s, i) => `
+      <div style="
+        display:flex;gap:10px;align-items:flex-start;
+        padding:${i < setups.length - 1 ? '0 0 8px 0' : '0'};
+        ${i < setups.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.06)' : ''}
+      ">
+        <div style="font-size:1.3rem;line-height:1;margin-top:2px">${s.emoji}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;font-weight:600;color:${i === 0 ? 'var(--accent)' : 'var(--text)'}">
+              ${s.rig}
+            </span>
+            ${i === 0 ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:0.5rem;background:rgba(125,211,252,0.15);color:var(--accent);padding:1px 5px;border-radius:2px">BEST BET</span>' : ''}
+          </div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:2px">${s.flies}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.35);font-style:italic">${s.tip}</div>
+        </div>
+      </div>
+    `).join('');
+
   } catch(e) {
-    // Graceful fallback to a sensible static pick
+    // Graceful fallback
     const flow_n = currentFlow || 0;
     const m = new Date().getMonth() + 1;
-    let rig = '🪁 Indicator Nymph', detail = 'Pheasant Tail + Zebra Midge under an indicator';
-    if (flow_n > 3000)       { rig = '🎣 Streamer';         detail = 'Sculpin or Bugger on a sink tip along seams'; }
-    else if (flow_n > 1500)  { rig = '🪁 Double Nymph';     detail = "Pat's Rubber Legs + PT #6–10 indicator"; }
-    else if (m >= 7 && m<=9) { rig = '🦗 Hopper-Dropper';   detail = '#8 Chubby Chernobyl + #16 Copper John'; }
-    else if (m >= 2 && m<=4) { rig = '🪰 Dry / Nymph';      detail = '#10 Skwala or #18 Parachute Adams'; }
-    el.textContent = rig;
-    el.classList.remove('skeleton');
-    note.textContent = detail;
-    note.className = 'stat-delta neutral';
+    let setups = [
+      { emoji:'🪁', rig:'Double Nymph', flies:"Pat's Rubber Legs #6 + Pheasant Tail #14", tip:'High water — weight heavy, run seams' }
+    ];
+    if (flow_n <= 1500 && m >= 7 && m <= 9) {
+      setups = [
+        { emoji:'🦗', rig:'Hopper-Dropper', flies:'Chubby Chernobyl #8 + Copper John #16', tip:'Target grassy banks midday' },
+        { emoji:'🪁', rig:'Double Nymph', flies:"Hare's Ear #12 + Zebra Midge #20", tip:'Early/late when surface is quiet' }
+      ];
+    } else if (flow_n <= 1500 && m >= 2 && m <= 4) {
+      setups = [
+        { emoji:'🪰', rig:'Dry Fly', flies:'Skwala #10 or Parachute Adams #18', tip:'Fish slowly through riffles 10am–3pm' },
+        { emoji:'🪁', rig:'Nymph Dropper', flies:'Girdle Bug #10 + BWO Nymph #18', tip:'Hang below a dry on flat water' }
+      ];
+    }
+    container.innerHTML = setups.map((s, i) => `
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:${i < setups.length-1?'0 0 8px 0':'0'};${i < setups.length-1?'border-bottom:1px solid rgba(255,255,255,0.06)':''}">
+        <div style="font-size:1.3rem;line-height:1;margin-top:2px">${s.emoji}</div>
+        <div style="flex:1">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;font-weight:600;color:${i===0?'var(--accent)':'var(--text)'};margin-bottom:2px">${s.rig}</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:2px">${s.flies}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.35);font-style:italic">${s.tip}</div>
+        </div>
+      </div>
+    `).join('');
   }
 
   document.getElementById('card-temp').classList.add('loaded');
@@ -1280,11 +1311,9 @@ async function loadAll() {
   renderHatches();
 
   // Reset skeletons
-  ['flow-val','gage-val','temp-val','airtemp-val'].forEach(id => {
+  ['flow-val','gage-val','airtemp-val'].forEach(id => {
     document.getElementById(id).classList.add('skeleton');
   });
-  document.getElementById('temp-note').textContent = 'asking Claude…';
-  document.getElementById('temp-note').className = 'stat-delta neutral';
 
   try {
     await Promise.all([fetchUSGS(), fetchWeather()]);
