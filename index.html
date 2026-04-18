@@ -726,7 +726,7 @@
     <div class="stat-card" id="card-gage">
       <div class="stat-label">Gauge Height</div>
       <div class="stat-value"><span class="skeleton" id="gage-val">0.00</span><span class="stat-unit">ft</span></div>
-      <div class="stat-delta" id="gage-note">Umtanum, WA</div>
+      <div class="stat-delta" id="gage-note">Loading…</div>
     </div>
     <div class="stat-card" id="card-temp" style="grid-column: span 2;">
       <div class="stat-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -741,7 +741,7 @@
     <div class="stat-card" id="card-wtemp">
       <div class="stat-label">Air Temp</div>
       <div class="stat-value"><span class="skeleton" id="airtemp-val">--</span><span class="stat-unit">°F</span></div>
-      <div class="stat-delta" id="airtemp-note">Easton, WA</div>
+      <div class="stat-delta" id="airtemp-note">Loading…</div>
     </div>
   </div>
 
@@ -756,10 +756,10 @@
     </div>
     <div class="track-zones">
       <span>Easy</span>
-      <span>500 cfs</span>
-      <span>1,000</span>
-      <span>1,500</span>
-      <span>2,000+</span>
+      <span id="wading-t1">500 cfs</span>
+      <span id="wading-t2">1,000</span>
+      <span id="wading-t3">1,500</span>
+      <span id="wading-t4">2,000+</span>
     </div>
   </div>
 
@@ -981,6 +981,16 @@ function switchRiver(riverId) {
   document.getElementById('footer-gauge').textContent = 'Flow data: USGS Water Services · USGS #' + activeRiver.usgs + ' (' + activeRiver.gaugeName + ')';
   document.getElementById('hatch-label').textContent = activeRiver.hatchLabel;
   document.getElementById('access-label').textContent = activeRiver.accessLabel;
+  document.getElementById('gage-note').textContent = activeRiver.gaugeName;
+  document.getElementById('airtemp-note').textContent = activeRiver.sublabel.split('→')[0].trim();
+
+  // Update wading scale tick labels
+  const t = activeRiver.wadingThresholds;
+  const fmt = n => n >= 1000 ? (n/1000).toFixed(0)+'k' : n.toString();
+  document.getElementById('wading-t1').textContent = fmt(t.easy) + ' cfs';
+  document.getElementById('wading-t2').textContent = fmt(t.moderate);
+  document.getElementById('wading-t3').textContent = fmt(t.difficult);
+  document.getElementById('wading-t4').textContent = fmt(t.floatOnly) + '+';
 
   // Reset state
   flowData = []; currentFlow = null; currentGage = null;
