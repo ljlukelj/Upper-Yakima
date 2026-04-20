@@ -1021,7 +1021,7 @@ function timeAgo(isoStr) {
 document.getElementById('current-date').textContent = formatDate();
 
 // ─── USGS DATA ────────────────────────────────────────────
-async function fetchUSGS(gen) {
+async function fetchUSGS(riverId) {
   const url = `https://yakima-proxy.ljlukelj.workers.dev/usgs?site=${activeRiver.usgs}`;
 
   let json;
@@ -1052,8 +1052,8 @@ async function fetchUSGS(gen) {
     if (code === '00065') gageVals = vals;
   }
 
-  // Bail if a newer tab switch has started
-  if (gen !== loadGeneration) return;
+  // Bail if user switched to a different river while this was fetching
+  if (activeRiver.id !== riverId) return;
 
   if (dischargeVals.length) {
     const latest = dischargeVals[dischargeVals.length - 1];
@@ -1096,12 +1096,12 @@ async function fetchUSGS(gen) {
 }
 
 // ─── WEATHER ──────────────────────────────────────────────
-async function fetchWeather(gen) {
+async function fetchWeather(riverId) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${activeRiver.lat}&longitude=${activeRiver.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=America%2FLos_Angeles&forecast_days=7`;
   const res = await fetch(url);
   const json = await res.json();
 
-  if (gen !== loadGeneration) return;
+  if (activeRiver.id !== riverId) return;
 
   weatherData = json;
 
@@ -1339,9 +1339,9 @@ function renderAccessPoints() {
 }
 
 // ─── AI INSIGHTS ──────────────────────────────────────────
-async function generateInsights(gen) {
-  // Allow manual regenerate button to bypass gen check by passing undefined
-  const checkGen = gen !== undefined;
+async function generateInsights(riverId) {
+  // Allow manual regenerate button (no riverId passed) to always run
+  const checkRiver = riverId !== undefined;
   const box = document.getElementById('insights-content');
 
   const flow     = currentFlow ? `${Math.round(currentFlow)} cfs` : 'unknown';
@@ -1383,7 +1383,7 @@ Write in a confident, direct guide voice. Be specific — mention actual fly pat
     const data = await res.json();
     const text = data.content?.[0]?.text || 'Unable to generate insights.';
 
-    if (checkGen && gen !== loadGeneration) return;
+    if (checkRiver && activeRiver.id !== riverId) return;
 
     const html = text.split('\n\n').map(p => p.trim()).filter(Boolean).map(p =>
       `<p style="margin-bottom:14px" class="insights-text">${p.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`
@@ -1392,13 +1392,13 @@ Write in a confident, direct guide voice. Be specific — mention actual fly pat
     box.innerHTML = html + `<button class="generate-btn" onclick="generateInsights()">↺ Regenerate Insights</button>`;
 
   } catch(e) {
-    if (checkGen && gen !== loadGeneration) return;
+    if (checkRiver && activeRiver.id !== riverId) return;
     box.innerHTML = `<div class="insights-text">Could not load AI insights. Error: ${e.message}<br><br><button class="generate-btn" onclick="generateInsights()">↺ Try Again</button></div>`;
   }
 }
 
 // ─── RIG RECOMMENDATION (AI-powered) ─────────────────────
-async function fetchWaterTemp(gen) {
+async function fetchWaterTemp(riverId) {
   const container = document.getElementById('rig-setups');
 
   const flow    = currentFlow  ? `${Math.round(currentFlow)} cfs`  : 'unknown';
@@ -1451,7 +1451,7 @@ Be specific. Use real Upper Yakima patterns. Base everything on the live conditi
     const text = (data.content?.[0]?.text || '').trim().replace(/```json|```/g, '').trim();
     const setups = JSON.parse(text);
 
-    if (gen !== loadGeneration) return;
+    if (activeRiver.id !== riverId) return;
 
     container.innerHTML = setups.map((s, i) => `
       <div style="
@@ -1474,7 +1474,7 @@ Be specific. Use real Upper Yakima patterns. Base everything on the live conditi
     `).join('');
 
   } catch(e) {
-    if (gen !== loadGeneration) return;
+    if (activeRiver.id !== riverId) return;
     // Graceful fallback
     const flow_n = currentFlow || 0;
     const m = new Date().getMonth() + 1;
@@ -1508,11 +1508,11 @@ Be specific. Use real Upper Yakima patterns. Base everything on the live conditi
 }
 
 // ─── BOOT ─────────────────────────────────────────────────
-let loadGeneration = 0; // increments on every tab switch; stale fetches self-abort
+let isLoading = false;
 
 async function loadAll() {
-  const gen = ++loadGeneration;           // capture this load's ID
-  const riverAtStart = activeRiver.id;   // capture which river we're loading
+  // Snapshot which river we're loading for
+  const riverSnapshot = activeRiver.id;
 
   renderHatches();
   renderAccessPoints();
@@ -1525,12 +1525,10 @@ async function loadAll() {
   });
 
   try {
-    await Promise.all([fetchUSGS(gen), fetchWeather(gen)]);
-
-    // Only fire AI calls if this is still the active load
-    if (gen === loadGeneration && activeRiver.id === riverAtStart) {
-      fetchWaterTemp(gen);
-      generateInsights(gen);
+    await Promise.all([fetchUSGS(riverSnapshot), fetchWeather(riverSnapshot)]);
+    if (activeRiver.id === riverSnapshot) {
+      fetchWaterTemp(riverSnapshot);
+      generateInsights(riverSnapshot);
     }
   } catch(e) {
     console.error('Data load error:', e);
