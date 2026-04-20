@@ -701,8 +701,8 @@
       <span class="tab-sub">Upper → Confluence</span>
     </button>
     <button class="river-tab" onclick="switchRiver('snoqualmie')">
-      Snoqualmie
-      <span class="tab-sub">Middle Fork → Carnation</span>
+      Snoqualmie MF
+      <span class="tab-sub">Middle Fork · Above Falls</span>
     </button>
   </nav>
 
@@ -865,8 +865,8 @@ const RIVERS = {
     id: 'yakimaCanyon',
     label: 'Yakima Canyon',
     sublabel: 'Roza Dam → Ellensburg',
-    usgs: '12484900',
-    gaugeName: 'Roza Dam gauge',
+    usgs: '12484500',
+    gaugeName: 'Umtanum gauge (mid-canyon)',
     lat: 46.8701, lon: -120.4816,
     wadingThresholds: { easy: 800, moderate: 1500, difficult: 2500, floatOnly: 3500 },
     hatches: [
@@ -895,8 +895,8 @@ const RIVERS = {
     id: 'naches',
     label: 'Naches River',
     sublabel: 'Upper Naches → Confluence',
-    usgs: '12498690',
-    gaugeName: 'Above Diversion Dam',
+    usgs: '12494400',
+    gaugeName: 'Naches at Naches gauge',
     lat: 46.9787, lon: -120.8284,
     wadingThresholds: { easy: 400, moderate: 700, difficult: 1100, floatOnly: 1600 },
     hatches: [
@@ -922,10 +922,10 @@ const RIVERS = {
   snoqualmie: {
     id: 'snoqualmie',
     label: 'Snoqualmie',
-    sublabel: 'Middle Fork → Carnation',
-    usgs: '12149000',
-    gaugeName: 'Near Carnation gauge',
-    lat: 47.6543, lon: -121.9127,
+    sublabel: 'Middle Fork → Tanner',
+    usgs: '12141300',
+    gaugeName: 'Middle Fork near Tanner',
+    lat: 47.5651, lon: -121.6476,
     wadingThresholds: { easy: 1000, moderate: 2500, difficult: 5000, floatOnly: 8000 },
     hatches: [
       { name:'Blue-Wing Olive', icon:'🪰', when:[1,2,3,4,10,11,12], detail:'Strong Baetis hatches on overcast days throughout the year. #18–22. Best in fall and early spring.' },
@@ -943,10 +943,10 @@ const RIVERS = {
       { name:'Carnation Farm Road', detail:'Near the USGS gauge. Good mainstem access. Watch for private property — use designated pullouts.', tags:['Wading','Drive-to'] },
       { name:'Duvall Town Park', detail:'Lower mainstem access. Mostly suited for float fishing at higher flows. City park with parking.', tags:['Launch','Parking'] },
     ],
-    hatchLabel: 'Current & Upcoming Hatches — Snoqualmie River',
-    accessLabel: 'Access Points — Middle Fork to Carnation',
-    aiContext: 'the Snoqualmie River in Washington state (larger coastal river system, rain-dominated, wild rainbow and cutthroat trout, some steelhead)',
-    insightTip: 'One or two specific tips unique to the Snoqualmie (rain-driven flows, coastal weather patterns, wild fish regulations, difference between forks)',
+    hatchLabel: 'Current & Upcoming Hatches — Middle Fork Snoqualmie',
+    accessLabel: 'Access Points — Middle Fork (Above Falls)',
+    aiContext: 'the Middle Fork Snoqualmie River near Tanner, WA (upper watershed above Snoqualmie Falls, wild rainbow and cutthroat trout, rain-dominated coastal river, best fished at lower flows)',
+    insightTip: 'One or two specific tips unique to the Middle Fork above the falls (remote access, wild fish regulations, how flows at the Tanner gauge translate to fishability)',
   },
 };
 
