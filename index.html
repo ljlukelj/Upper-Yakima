@@ -704,6 +704,26 @@
       Snoqualmie MF
       <span class="tab-sub">Middle Fork · Above Falls</span>
     </button>
+    <button class="river-tab" onclick="switchRiver('methow')">
+      Methow
+      <span class="tab-sub">Winthrop → Pateros</span>
+    </button>
+    <button class="river-tab" onclick="switchRiver('okanogan')">
+      Okanogan
+      <span class="tab-sub">Tonasket → Omak</span>
+    </button>
+    <button class="river-tab" onclick="switchRiver('klickitat')">
+      Klickitat
+      <span class="tab-sub">Canyon → Columbia</span>
+    </button>
+    <button class="river-tab" onclick="switchRiver('cowlitz')">
+      Cowlitz
+      <span class="tab-sub">Packwood → Riffe Lake</span>
+    </button>
+    <button class="river-tab" onclick="switchRiver('kalama')">
+      Kalama
+      <span class="tab-sub">Headwaters → Columbia</span>
+    </button>
   </nav>
 
   <!-- Condition Banner -->
@@ -865,8 +885,8 @@ const RIVERS = {
     id: 'yakimaCanyon',
     label: 'Yakima Canyon',
     sublabel: 'Roza Dam → Ellensburg',
-    usgs: '12484500',
-    gaugeName: 'Umtanum gauge (mid-canyon)',
+    usgs: '12487000',
+    gaugeName: 'Selah Gap gauge (canyon exit)',
     lat: 46.8701, lon: -120.4816,
     wadingThresholds: { easy: 800, moderate: 1500, difficult: 2500, floatOnly: 3500 },
     hatches: [
@@ -947,6 +967,146 @@ const RIVERS = {
     accessLabel: 'Access Points — Middle Fork (Above Falls)',
     aiContext: 'the Middle Fork Snoqualmie River near Tanner, WA (upper watershed above Snoqualmie Falls, wild rainbow and cutthroat trout, rain-dominated coastal river, best fished at lower flows)',
     insightTip: 'One or two specific tips unique to the Middle Fork above the falls (remote access, wild fish regulations, how flows at the Tanner gauge translate to fishability)',
+  },
+  methow: {
+    id: 'methow',
+    label: 'Methow River',
+    sublabel: 'Winthrop → Pateros',
+    usgs: '12448500',
+    gaugeName: 'Winthrop gauge',
+    lat: 48.4726, lon: -120.1769,
+    wadingThresholds: { easy: 600, moderate: 1200, difficult: 2000, floatOnly: 3000 },
+    hatches: [
+      { name:'Blue-Wing Olive', icon:'🪰', when:[1,2,3,4,10,11,12], detail:'Strong Baetis hatches on overcast days. #18–22. Best in fall and early spring during lower flows.' },
+      { name:'Skwala Stonefly', icon:'🪲', when:[3,4], detail:'Good early-season stone hatch in March–April. Fish #8–10 dries along sunny banks in the afternoon.' },
+      { name:'Salmonfly', icon:'🦗', when:[5,6], detail:'Excellent salmonfly hatch in May–June as flows drop. Large foam patterns along rocky banks.' },
+      { name:'Golden Stonefly', icon:'🌟', when:[6,7], detail:'Follows the salmonfly. #6–8 golden stones through June and July in faster pocket water.' },
+      { name:'Caddis', icon:'🦋', when:[5,6,7,8], detail:'Reliable caddis activity all summer. Elk Hair Caddis and X-Caddis in evenings.' },
+      { name:'Terrestrials', icon:'🐜', when:[7,8,9], detail:'Excellent hopper fishing in summer. Grassy banks and meadow stretches through Winthrop valley.' },
+      { name:'October Caddis', icon:'🍂', when:[9,10,11], detail:'Good fall caddis hatch. #8–10 orange patterns in afternoons.' },
+      { name:'Midges', icon:'🦟', when:[1,2,12], detail:'Winter midge fishing in slower pools when flows are low and clear.' },
+    ],
+    accessPoints: [
+      { name:'Winthrop Town Access', detail:'Good wade access near downtown Winthrop. Popular and easy to reach. Fish upstream and downstream of town.', tags:['Wading','Drive-to','Parking'] },
+      { name:'Methow Valley Road Pullouts', detail:'Multiple pullouts along Hwy 20 between Winthrop and Twisp. Less pressure than town stretches.', tags:['Wading','Informal'] },
+      { name:'Twisp River Confluence', detail:'Twisp River adds volume here. Good holding water for larger fish in fall.', tags:['Wading','Drive-to'] },
+      { name:'Mazama / Upper River', detail:'Above Winthrop toward Mazama. Smaller, technical water. Best in summer at lower flows.', tags:['Wading','Walk-in','Upper River'] },
+    ],
+    hatchLabel: 'Current & Upcoming Hatches — Methow River',
+    accessLabel: 'Access Points — Winthrop to Pateros',
+    aiContext: 'the Methow River in north-central Washington (freestone river, no major dams, wild rainbow and cutthroat, excellent dry fly river, flows from the North Cascades through Winthrop)',
+    insightTip: 'One or two tips specific to the Methow (freestone flows, North Cascades snowmelt timing, Winthrop-area access, east-slope dry conditions)',
+  },
+  okanogan: {
+    id: 'okanogan',
+    label: 'Okanogan River',
+    sublabel: 'Tonasket → Omak',
+    usgs: '12447200',
+    gaugeName: 'Malott gauge',
+    lat: 48.2976, lon: -119.7093,
+    wadingThresholds: { easy: 800, moderate: 1800, difficult: 3000, floatOnly: 5000 },
+    hatches: [
+      { name:'Blue-Wing Olive', icon:'🪰', when:[1,2,3,4,10,11,12], detail:'Reliable Baetis hatches on overcast days. #18–22. Best in fall and early spring.' },
+      { name:'Caddis', icon:'🦋', when:[5,6,7,8], detail:'Good summer caddis activity. Elk Hair Caddis in evenings along slower stretches.' },
+      { name:'Pale Morning Dun', icon:'🌼', when:[6,7,8], detail:'PMD hatches in summer on smoother water. #16–18 parachute or comparadun.' },
+      { name:'Terrestrials', icon:'🐜', when:[7,8,9], detail:'Hoppers and ants in summer along grassy banks. Best at lower late-summer flows.' },
+      { name:'October Caddis', icon:'🍂', when:[9,10,11], detail:'Fall caddis hatch. #8–10 orange stimulator in afternoons.' },
+      { name:'Midges', icon:'🦟', when:[1,2,12], detail:'Winter midge fishing in slower runs. #20–24 patterns.' },
+    ],
+    accessPoints: [
+      { name:'Malott Bridge', detail:'Access near the gauge site. Good wade fishing above and below the bridge. Less pressure than Omak.', tags:['Wading','Drive-to'] },
+      { name:'Omak City Area', detail:'Multiple access points near Omak. Popular stretch. Fish early or late to avoid pressure.', tags:['Wading','Drive-to','Parking'] },
+      { name:'Tonasket Stretch', detail:'Upper river near Tonasket. Productive in spring and fall. Verify tribal and state regs for this section.', tags:['Wading','Regulations'] },
+      { name:'Okanogan Town Access', detail:'Lower river near the town of Okanogan. Near Columbia confluence. Good fall steelhead staging water.', tags:['Wading','Drive-to','Steelhead'] },
+    ],
+    hatchLabel: 'Current & Upcoming Hatches — Okanogan River',
+    accessLabel: 'Access Points — Tonasket to Omak',
+    aiContext: 'the Okanogan River in north-central Washington (tributary of the Columbia, flows from Canada through Tonasket and Omak, rainbow trout and steelhead, drier east-of-Cascades climate)',
+    insightTip: 'One or two tips specific to the Okanogan (tribal reservation regulations near Omak, irrigation impacts on summer flows, fall steelhead timing)',
+  },
+  klickitat: {
+    id: 'klickitat',
+    label: 'Klickitat River',
+    sublabel: 'Canyon → Columbia',
+    usgs: '14113000',
+    gaugeName: 'Near Pitt gauge',
+    lat: 45.8207, lon: -121.1543,
+    wadingThresholds: { easy: 500, moderate: 1000, difficult: 1800, floatOnly: 2800 },
+    hatches: [
+      { name:'Blue-Wing Olive', icon:'🪰', when:[1,2,3,4,10,11,12], detail:'Strong Baetis hatches, especially in fall. #18–22 on overcast days.' },
+      { name:'Salmonfly', icon:'🦗', when:[5,6], detail:'Good salmonfly hatch in May–June. Large foam patterns along rocky canyon banks.' },
+      { name:'Golden Stonefly', icon:'🌟', when:[6,7], detail:'Follows the salmonfly. #6–8 golden stones in pocket water through the canyon.' },
+      { name:'Caddis', icon:'🦋', when:[5,6,7,8], detail:'Reliable caddis throughout summer. Evening hatches can be strong in the canyon.' },
+      { name:'Terrestrials', icon:'🐜', when:[7,8,9], detail:'Hoppers and ants in summer. Canyon walls provide shade — fish early and late.' },
+      { name:'October Caddis', icon:'🍂', when:[9,10,11], detail:'Strong October Caddis — one of the best hatches on the river. #8–10 orange patterns.' },
+      { name:'Midges', icon:'🦟', when:[1,2,12], detail:'Winter midge fishing. #20–24 patterns in slower pools.' },
+    ],
+    accessPoints: [
+      { name:'Pitt / Lower Canyon', detail:'Near the gauge site. Good lower canyon access. Technical wading — felt soles or cleats required.', tags:['Wading','Canyon','Technical'] },
+      { name:'Lyle / Columbia Confluence', detail:'Lower river near Lyle. Wide access. Steelhead staging water in fall and winter.', tags:['Wading','Drive-to','Steelhead'] },
+      { name:'Klickitat Canyon Road', detail:'Road follows the river through the canyon. Multiple pulloffs. Scenic but technical wading.', tags:['Wading','Canyon','Drive-to'] },
+      { name:'Upper River above Goldendale', detail:'Smaller water above the canyon. Better for trout, significantly less pressure.', tags:['Wading','Trout','Upper River'] },
+    ],
+    hatchLabel: 'Current & Upcoming Hatches — Klickitat River',
+    accessLabel: 'Access Points — Canyon to Columbia',
+    aiContext: 'the Klickitat River in south-central Washington (canyon river, tributary of the Columbia, wild rainbow and steelhead, Columbia Gorge climate, technical canyon wading, no major dams on mainstem)',
+    insightTip: 'One or two tips specific to the Klickitat (canyon terrain requiring careful wading, Columbia Gorge wind patterns, fall steelhead timing)',
+  },
+  cowlitz: {
+    id: 'cowlitz',
+    label: 'Cowlitz River',
+    sublabel: 'Packwood → Riffe Lake',
+    usgs: '14226500',
+    gaugeName: 'Packwood gauge',
+    lat: 46.6073, lon: -121.6791,
+    wadingThresholds: { easy: 600, moderate: 1200, difficult: 2000, floatOnly: 3500 },
+    hatches: [
+      { name:'Blue-Wing Olive', icon:'🪰', when:[1,2,3,4,10,11,12], detail:'Year-round Baetis on overcast days. #18–22. Best in fall and winter on the upper river.' },
+      { name:'Skwala Stonefly', icon:'🪲', when:[3,4], detail:'Early season stones in March–April near Packwood.' },
+      { name:'Salmonfly', icon:'🦗', when:[5,6], detail:'Good salmonfly hatch on the upper Cowlitz in May–June.' },
+      { name:'Caddis', icon:'🦋', when:[5,6,7,8], detail:'Strong caddis activity all summer. Elk Hair Caddis and X-Caddis.' },
+      { name:'Terrestrials', icon:'🐜', when:[7,8,9], detail:'Hoppers and ants in summer on meadow stretches near Packwood.' },
+      { name:'October Caddis', icon:'🍂', when:[9,10,11], detail:'Good fall caddis hatch. #8–10 orange patterns.' },
+      { name:'Midges', icon:'🦟', when:[1,2,12], detail:'Winter midge fishing in slower water. Important winter trout pattern.' },
+    ],
+    accessPoints: [
+      { name:'Packwood Town Access', detail:'Upper river near Packwood. Best dry fly water on the Cowlitz. Walk-in stretches above town.', tags:['Wading','Walk-in','Trout'] },
+      { name:'Skate Creek Confluence', detail:'Above Packwood. Less pressure. Good cutthroat water where Skate Creek enters.', tags:['Wading','Walk-in','Cutthroat'] },
+      { name:'La Wis Wis Campground', detail:'USFS campground with river access. Good spring and fall fishing above Cowlitz Falls Dam.', tags:['Wading','Camping','Drive-to'] },
+      { name:'Randle Area', detail:'Below Cowlitz Falls Dam. Steelhead and salmon water. Check WDFW regulations carefully.', tags:['Wading','Steelhead','Regulations'] },
+    ],
+    hatchLabel: 'Current & Upcoming Hatches — Upper Cowlitz',
+    accessLabel: 'Access Points — Packwood to Riffe Lake',
+    aiContext: 'the upper Cowlitz River above Cowlitz Falls Dam near Packwood, WA (mountain freestone river, wild rainbow and cutthroat trout, rainforest Cascade climate, influenced by Mt Rainier watershed)',
+    insightTip: 'One or two tips specific to the upper Cowlitz (rainforest weather, how the Packwood gauge flows translate to wading conditions, best trout stretches above town)',
+  },
+  kalama: {
+    id: 'kalama',
+    label: 'Kalama River',
+    sublabel: 'Headwaters → Columbia',
+    usgs: '14223000',
+    gaugeName: 'Near Kalama gauge',
+    lat: 46.0146, lon: -122.7001,
+    wadingThresholds: { easy: 400, moderate: 800, difficult: 1400, floatOnly: 2200 },
+    hatches: [
+      { name:'Blue-Wing Olive', icon:'🪰', when:[1,2,3,4,10,11,12], detail:'Year-round Baetis on overcast days. #18–22. Critical winter pattern when steelhead are in the river.' },
+      { name:'March Brown', icon:'🌿', when:[3,4,5], detail:'Good March Brown hatch in spring. #10–14 comparadun or soft hackle.' },
+      { name:'Caddis', icon:'🦋', when:[4,5,6,7,8,9], detail:'Strong caddis activity spring through fall. Elk Hair Caddis and soft hackles. Evening hatches.' },
+      { name:'Terrestrials', icon:'🐜', when:[7,8,9], detail:'Ants and beetles in summer. Hoppers along grassy banks at lower summer flows.' },
+      { name:'October Caddis', icon:'🍂', when:[9,10,11], detail:'Strong October Caddis — one of the best fall hatches. #8–10 orange patterns.' },
+      { name:'Midges', icon:'🦟', when:[11,12,1,2], detail:'Important winter midge fishing. #20–24 patterns. Key when steelhead are present.' },
+      { name:'Steelhead Flies', icon:'🎣', when:[10,11,12,1,2,3], detail:'Winter steelhead Oct–March. Intruder-style, egg flies, Skagit heads. Some summer steelhead Aug–Sept.' },
+    ],
+    accessPoints: [
+      { name:'Kalama Falls Hatchery', detail:'Popular access point mid-river. Hatchery steelhead water. Crowded on weekends in winter.', tags:['Wading','Steelhead','Drive-to'] },
+      { name:'Summers Creek Bridge', detail:'Good mid-river access. Walk upstream for better wild trout stretches with less pressure.', tags:['Wading','Drive-to','Trout'] },
+      { name:'Lower Kalama', detail:'Near Columbia confluence. Steelhead staging water in fall and winter. Both fly and gear anglers.', tags:['Wading','Steelhead','Drive-to'] },
+      { name:'Upper Kalama / Spencer Creek', detail:'Upper river. Smaller water. Better for wild trout. Significantly less pressure than lower sections.', tags:['Wading','Walk-in','Trout'] },
+    ],
+    hatchLabel: 'Current & Upcoming Hatches — Kalama River',
+    accessLabel: 'Access Points — Kalama River',
+    aiContext: 'the Kalama River in southwest Washington (coastal river flowing into the Columbia, wild steelhead and trout, rain-dominated SW Washington climate, mix of hatchery and wild fish)',
+    insightTip: 'One or two tips specific to the Kalama (coastal rain-driven flows, wild vs hatchery fish regulations, winter steelhead timing, SW Washington weather)',
   },
 };
 
