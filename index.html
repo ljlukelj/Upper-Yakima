@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Upper Yakima Fishing — Easton to Thorpe</title>
+<title>PNW Fishing Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1233,6 +1233,7 @@
         <div class="date" id="current-date">Loading…</div>
         <div id="last-updated">Updating data…</div>
         <div id="gauge-label">USGS #12484500 · Umtanum gauge</div>
+        <div id="moon-phase" style="margin-top:4px;font-size:0.8rem;letter-spacing:0.05em"></div>
       </div>
     </div>
   </header>
@@ -1314,20 +1315,25 @@
       <div class="stat-value"><span class="skeleton" id="gage-val">0.00</span><span class="stat-unit">ft</span></div>
       <div class="stat-delta" id="gage-note">Loading…</div>
     </div>
-    <div class="stat-card" id="card-temp" style="grid-column: span 2;">
+    <div class="stat-card" id="card-wtemp">
+      <div class="stat-label">Water Temp</div>
+      <div class="stat-value"><span class="skeleton" id="wtemp-val">--</span><span class="stat-unit" id="wtemp-unit">°F</span></div>
+      <div class="stat-delta" id="wtemp-note">USGS sensor</div>
+    </div>
+    <div class="stat-card" id="card-airtemp">
+      <div class="stat-label">Air Temp</div>
+      <div class="stat-value"><span class="skeleton" id="airtemp-val">--</span><span class="stat-unit">°F</span></div>
+      <div class="stat-delta" id="airtemp-note">Loading…</div>
+    </div>
+    <div class="stat-card" id="card-temp" style="grid-column: 1 / -1;">
       <div class="stat-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         Recommended Setups
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:0.5rem;background:rgba(125,211,252,0.1);color:var(--accent);border:1px solid rgba(125,211,252,0.3);padding:1px 6px;border-radius:2px;letter-spacing:0.1em">AI</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:0.5rem;background:rgba(125,211,252,0.1);color:var(--accent);border:1px solid rgba(125,211,252,0.3);padding:1px 6px;border-radius:2px;letter-spacing:0.1em">AI · Live Conditions</span>
       </div>
       <div id="rig-setups" style="display:flex;flex-direction:column;gap:8px">
         <div id="temp-val" style="color:var(--muted);font-size:0.8rem;font-family:'IBM Plex Mono',monospace">asking Claude…</div>
       </div>
       <div id="temp-note" style="display:none"></div>
-    </div>
-    <div class="stat-card" id="card-wtemp">
-      <div class="stat-label">Air Temp</div>
-      <div class="stat-value"><span class="skeleton" id="airtemp-val">--</span><span class="stat-unit">°F</span></div>
-      <div class="stat-delta" id="airtemp-note">Loading…</div>
     </div>
   </div>
 
@@ -1895,13 +1901,11 @@ const RIVERS = {
 let activeRiver = RIVERS.upperYakima;
 
 // ─── STATE ────────────────────────────────────────────────
-
-// ─── STATE ────────────────────────────────────────────────
 let flowData = [];
 let currentFlow = null;
 let currentGage = null;
-let currentWaterTemp = null;
-let airTemp = null;
+let currentWaterTemp = null;  // °F from USGS 00010
+let airTemp = null;           // °F from Open-Meteo
 let weatherData = null;
 
 // ─── SWITCH RIVER ─────────────────────────────────────────
@@ -1912,6 +1916,9 @@ function switchRiver(riverId) {
   document.querySelectorAll('.river-tab').forEach((btn, i) => {
     btn.classList.toggle('active', Object.keys(RIVERS)[i] === riverId);
   });
+
+  // Update page title
+  document.title = `${activeRiver.label} — PNW Fishing Dashboard`;
 
   // Update header
   const parts = activeRiver.label.split(' ');
@@ -1938,6 +1945,15 @@ function switchRiver(riverId) {
   flowData = []; currentFlow = null; currentGage = null;
   currentWaterTemp = null; airTemp = null; weatherData = null;
 
+  // Reset stat cards to skeleton
+  ['flow-val','gage-val','airtemp-val'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '—'; el.classList.add('skeleton'); }
+  });
+  const wtempEl = document.getElementById('wtemp-val');
+  if (wtempEl) { wtempEl.textContent = '--'; wtempEl.classList.add('skeleton'); }
+  document.getElementById('wtemp-note').textContent = 'USGS sensor';
+
   // Reset rig box
   document.getElementById('rig-setups').innerHTML = '<div style="color:var(--muted);font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace">asking Claude…</div>';
 
@@ -1961,6 +1977,7 @@ function timeAgo(isoStr) {
 }
 
 document.getElementById('current-date').textContent = formatDate();
+document.title = `${activeRiver.label} — PNW Fishing Dashboard`;
 
 // ─── USGS DATA ────────────────────────────────────────────
 async function fetchUSGS(riverId) {
@@ -1986,12 +2003,14 @@ async function fetchUSGS(riverId) {
 
   let dischargeVals = [];
   let gageVals = [];
+  let waterTempVals = [];
 
   for (const s of series) {
     const code = s.variable?.variableCode?.[0]?.value;
     const vals = s.values?.[0]?.value?.filter(v => v.value !== '-999999') || [];
     if (code === '00060') dischargeVals = vals;
     if (code === '00065') gageVals = vals;
+    if (code === '00010') waterTempVals = vals; // water temp in °C
   }
 
   // Bail if user switched to a different river while this was fetching
@@ -2031,6 +2050,33 @@ async function fetchUSGS(riverId) {
     document.getElementById('card-gage').classList.add('loaded');
   }
 
+  // Water temperature
+  const wtempEl = document.getElementById('wtemp-val');
+  const wtempNote = document.getElementById('wtemp-note');
+  if (waterTempVals.length) {
+    const latest = waterTempVals[waterTempVals.length - 1];
+    const tempC = parseFloat(latest.value);
+    const tempF = (tempC * 9/5) + 32;
+    currentWaterTemp = Math.round(tempF * 10) / 10;
+    if (wtempEl) {
+      wtempEl.textContent = currentWaterTemp.toFixed(1);
+      wtempEl.classList.remove('skeleton');
+    }
+    // Water temp fishing note
+    let tempTip = '';
+    if (currentWaterTemp < 40) tempTip = 'Slow — midges only';
+    else if (currentWaterTemp < 48) tempTip = 'Cold — fish deep & slow';
+    else if (currentWaterTemp < 55) tempTip = 'Good — trout active';
+    else if (currentWaterTemp < 62) tempTip = '★ Prime feeding range';
+    else if (currentWaterTemp < 68) tempTip = 'Warm — early/late only';
+    else tempTip = '⚠️ Stress temps — please release quickly';
+    if (wtempNote) wtempNote.textContent = tempTip;
+    document.getElementById('card-wtemp').classList.add('loaded');
+  } else {
+    // No water temp sensor at this gauge
+    if (wtempEl) { wtempEl.textContent = 'N/A'; wtempEl.classList.remove('skeleton'); }
+    if (wtempNote) wtempNote.textContent = 'No sensor at this gauge';
+  }
 
   updateWading();
   updateConditionBanner();
@@ -2048,13 +2094,15 @@ async function fetchWeather(riverId) {
   weatherData = json;
 
   const curr = json.current_weather;
-  const el   = document.getElementById('airtemp-val');
-  el.textContent = Math.round(curr.temperature);
+  airTemp = curr.temperature; // ← assign to module-level var (was missing!)
+
+  const el = document.getElementById('airtemp-val');
+  el.textContent = Math.round(airTemp);
   el.classList.remove('skeleton');
-  document.getElementById('card-wtemp').classList.add('loaded');
+  document.getElementById('card-airtemp').classList.add('loaded');
 
   const wind = curr.windspeed;
-  document.getElementById('airtemp-note').textContent = `Wind ${Math.round(wind)} mph`;
+  document.getElementById('airtemp-note').textContent = `Wind ${Math.round(wind)} mph · ${curr.is_day ? 'Daytime' : 'Nighttime'}`;
 
   renderForecast(json.daily);
   updateConditionBanner();
@@ -2288,7 +2336,7 @@ async function generateInsights(riverId) {
 
   const flow     = currentFlow ? `${Math.round(currentFlow)} cfs` : 'unknown';
   const gage     = currentGage ? `${currentGage.toFixed(2)} ft` : 'unknown';
-  const wTemp    = currentWaterTemp ? `${currentWaterTemp}°F` : 'unavailable';
+  const wTemp    = currentWaterTemp ? `${currentWaterTemp}°F` : 'not available at this gauge';
   const aTemp    = airTemp ? `${Math.round(airTemp)}°F` : 'unknown';
   const month    = new Date().toLocaleString('en-US', { month:'long' });
   const hatches  = getHatches().filter(h => h.active).map(h => h.name).join(', ') || 'None strongly active';
@@ -2298,8 +2346,8 @@ async function generateInsights(riverId) {
 Current conditions (USGS #${activeRiver.usgs} — ${activeRiver.gaugeName}):
 - River flow: ${flow}
 - Gauge height: ${gage}
-- Water temp: ${wTemp}
-- Air temp: ${aTemp}
+- Water temperature: ${wTemp}
+- Air temperature: ${aTemp}
 - Month: ${month}
 - Active hatches: ${hatches}
 
@@ -2340,12 +2388,12 @@ Write in a confident, direct guide voice. Be specific — mention actual fly pat
 }
 
 // ─── RIG RECOMMENDATION (AI-powered) ─────────────────────
-async function fetchWaterTemp(riverId) {
+async function fetchRigRecommendations(riverId) {
   const container = document.getElementById('rig-setups');
 
   const flow    = currentFlow  ? `${Math.round(currentFlow)} cfs`  : 'unknown';
   const gage    = currentGage  ? `${currentGage.toFixed(2)} ft`    : 'unknown';
-  const wTemp   = currentWaterTemp ? `${currentWaterTemp}°F`        : 'unavailable';
+  const wTemp   = currentWaterTemp ? `${currentWaterTemp}°F`        : 'not available at this gauge';
   const aTemp   = airTemp      ? `${Math.round(airTemp)}°F`         : 'unknown';
   const hour    = new Date().getHours();
   const timeOfDay = hour < 6 ? 'pre-dawn' : hour < 10 ? 'morning' : hour < 14 ? 'midday' : hour < 18 ? 'afternoon' : 'evening';
@@ -2376,7 +2424,7 @@ Respond with ONLY a JSON array — no markdown, no explanation — in this exact
   }
 ]
 
-Be specific. Use real Upper Yakima patterns. Base everything on the live conditions.`;
+Be specific. Use real patterns that work on ${activeRiver.label}. Base everything on the live conditions.`;
 
   try {
     const res = await fetch('https://yakima-proxy.ljlukelj.workers.dev/ai', {
@@ -2450,8 +2498,6 @@ Be specific. Use real Upper Yakima patterns. Base everything on the live conditi
 }
 
 // ─── BOOT ─────────────────────────────────────────────────
-let isLoading = false;
-
 async function loadAll() {
   // Snapshot which river we're loading for
   const riverSnapshot = activeRiver.id;
@@ -2460,22 +2506,56 @@ async function loadAll() {
   renderAccessPoints();
 
   // Reset skeletons
-  ['flow-val','gage-val','airtemp-val'].forEach(id => {
+  ['flow-val','gage-val','airtemp-val','wtemp-val'].forEach(id => {
     const el = document.getElementById(id);
-    el.textContent = '—';
-    el.classList.add('skeleton');
+    if (el) { el.textContent = '—'; el.classList.add('skeleton'); }
   });
 
   try {
     await Promise.all([fetchUSGS(riverSnapshot), fetchWeather(riverSnapshot)]);
     if (activeRiver.id === riverSnapshot) {
-      fetchWaterTemp(riverSnapshot);
+      fetchRigRecommendations(riverSnapshot);
       generateInsights(riverSnapshot);
     }
   } catch(e) {
     console.error('Data load error:', e);
   }
 }
+
+// ─── MOON PHASE ───────────────────────────────────────────
+function getMoonPhase() {
+  const now = new Date();
+  // Known new moon reference: Jan 29, 2025
+  const knownNewMoon = new Date('2025-01-29T12:36:00Z');
+  const lunarCycle = 29.53058867; // days
+  const diff = (now - knownNewMoon) / (1000 * 60 * 60 * 24);
+  const phase = ((diff % lunarCycle) + lunarCycle) % lunarCycle;
+  const pct = phase / lunarCycle;
+
+  let emoji, name, tip;
+  if (pct < 0.03 || pct > 0.97)      { emoji = '🌑'; name = 'New Moon';        tip = 'Low light — insects hatch more freely'; }
+  else if (pct < 0.22)                { emoji = '🌒'; name = 'Waxing Crescent'; tip = 'Good evening fishing as light fades'; }
+  else if (pct < 0.28)                { emoji = '🌓'; name = 'First Quarter';   tip = 'Active feeding periods, good all day'; }
+  else if (pct < 0.47)                { emoji = '🌔'; name = 'Waxing Gibbous';  tip = 'Terrestrials working well this phase'; }
+  else if (pct < 0.53)                { emoji = '🌕'; name = 'Full Moon';       tip = 'Fish feed heavily at dawn and dusk'; }
+  else if (pct < 0.72)                { emoji = '🌖'; name = 'Waning Gibbous';  tip = 'Midday hatches often strongest'; }
+  else if (pct < 0.78)                { emoji = '🌗'; name = 'Last Quarter';    tip = 'Good morning fishing, fish rising early'; }
+  else                                 { emoji = '🌘'; name = 'Waning Crescent'; tip = 'Nymphing often outperforms dries'; }
+
+  return { emoji, name, tip, phase: Math.round(phase) };
+}
+
+function renderMoonPhase() {
+  const moon = getMoonPhase();
+  const el = document.getElementById('moon-phase');
+  if (el) {
+    el.innerHTML = `<span title="${moon.tip}">${moon.emoji} ${moon.name} · Day ${moon.phase}</span>`;
+    el.title = moon.tip;
+    el.style.cursor = 'help';
+  }
+}
+
+renderMoonPhase();
 
 loadAll();
 
@@ -2493,7 +2573,26 @@ function switchMode(mode) {
     if (el) el.style.display = m === mode ? 'block' : 'none';
   });
   if (mode === 'knots') renderKnots();
-  if (mode === 'triplog') { setDefaultDate(); renderTripLog(); }
+  if (mode === 'triplog') {
+    setDefaultDate();
+    // Auto-fill current flow and river from dashboard
+    if (currentFlow) {
+      const flowInput = document.getElementById('log-flow');
+      if (flowInput && !flowInput.value) flowInput.value = Math.round(currentFlow);
+    }
+    // Pre-select current river
+    const riverSelect = document.getElementById('log-river');
+    if (riverSelect) {
+      const riverLabel = activeRiver.label;
+      for (const opt of riverSelect.options) {
+        if (opt.value.includes(riverLabel.split(' ')[1] || riverLabel.split(' ')[0])) {
+          riverSelect.value = opt.value;
+          break;
+        }
+      }
+    }
+    renderTripLog();
+  }
   if (mode === 'regs') renderRegs();
   if (mode === 'calc') { calcLeader(); calcHook(); calcWeight(); }
   if (mode === 'shops') renderShops();
