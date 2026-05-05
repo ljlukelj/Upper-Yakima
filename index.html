@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PNW Fishing Dashboard</title>
+<title>DriftScout — Fishing Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1218,6 +1218,42 @@
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .river-tab { padding: 8px 10px 10px; font-size: 0.65rem; }
   }
+
+  /* ── RIVER SEARCH ── */
+  .river-search-box{margin-bottom:20px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:4px}
+  .river-search-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:block}
+  .river-search-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .search-select{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:8px 10px;border-radius:2px;outline:none;cursor:pointer}
+  .search-select:focus{border-color:var(--accent)}
+  #site-search-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:8px 12px;border-radius:2px;outline:none;flex:1;min-width:180px}
+  #site-search-input:focus{border-color:var(--accent)}
+  #site-search-input::placeholder{color:var(--muted)}
+  #site-results{margin-top:8px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:2px;background:var(--surface2)}
+  .site-result-item{padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s}
+  .site-result-item:hover{background:rgba(125,211,252,0.07)}
+  .site-result-name{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text)}
+  .site-result-id{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:2px}
+  #site-search-status{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--muted);margin-top:8px;min-height:1.2em;display:block}
+
+  /* ── KNOTS ACCORDION ── */
+  .knot-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:pointer;transition:border-color 0.2s}
+  .knot-card:hover{border-color:rgba(125,211,252,0.35)}
+  .knot-card.open{border-color:var(--accent)}
+  .knot-header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;user-select:none}
+  .knot-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border)}
+  .knot-card.open .knot-body{display:block}
+  .knot-diagram{background:#080c10;border-radius:3px;margin:14px 0 16px;padding:16px;display:flex;align-items:center;justify-content:center;min-height:90px}
+  .knot-diagram svg{width:100%;max-height:80px;overflow:visible}
+  .knot-step-row{display:flex;gap:12px;margin-bottom:10px;font-size:0.82rem;color:var(--muted);line-height:1.55}
+  .knot-step-n{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent);background:rgba(125,211,252,0.08);border:1px solid rgba(125,211,252,0.2);border-radius:2px;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .knot-pro-tip{margin-top:10px;padding:9px 13px;background:rgba(125,211,252,0.05);border-left:2px solid var(--accent);font-size:0.78rem;color:var(--muted);font-style:italic;border-radius:0 2px 2px 0}
+  .knot-chevron{font-size:0.7rem;color:var(--muted);transition:transform 0.25s;flex-shrink:0}
+  .knot-card.open .knot-chevron{transform:rotate(180deg);color:var(--accent)}
+  .knot-right-meta{display:flex;align-items:center;gap:12px}
+  .knot-strength-pct{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--muted)}
+
+  /* ── WATER TEMP ESTIMATED BADGE ── */
+  .wtemp-est-badge{font-family:'IBM Plex Mono',monospace;font-size:0.52rem;background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.25);padding:1px 6px;border-radius:2px;display:inline-block;margin-top:4px}
 </style>
 </head>
 <body>
@@ -1233,7 +1269,7 @@
         <div class="date" id="current-date">Loading…</div>
         <div id="last-updated">Updating data…</div>
         <div id="gauge-label">USGS #12484500 · Umtanum gauge</div>
-        <div id="moon-phase" style="margin-top:4px;font-size:0.8rem;letter-spacing:0.05em"></div>
+        <div id="moon-phase" style="margin-top:2px;font-size:0.75rem;color:var(--muted)"></div>
       </div>
     </div>
   </header>
@@ -1252,6 +1288,69 @@
   <!-- RIVER DASHBOARD -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div id="river-dashboard">
+
+  <!-- Nationwide River Search -->
+  <div class="river-search-box">
+    <span class="river-search-label">Search Any US River — Live USGS Gauge Data Nationwide</span>
+    <div class="river-search-row">
+      <select class="search-select" id="state-picker" onchange="onStatePick()">
+        <option value="">— State —</option>
+        <option value="AL">Alabama</option>
+        <option value="AK">Alaska</option>
+        <option value="AZ">Arizona</option>
+        <option value="AR">Arkansas</option>
+        <option value="CA">California</option>
+        <option value="CO">Colorado</option>
+        <option value="CT">Connecticut</option>
+        <option value="DE">Delaware</option>
+        <option value="FL">Florida</option>
+        <option value="GA">Georgia</option>
+        <option value="HI">Hawaii</option>
+        <option value="ID">Idaho</option>
+        <option value="IL">Illinois</option>
+        <option value="IN">Indiana</option>
+        <option value="IA">Iowa</option>
+        <option value="KS">Kansas</option>
+        <option value="KY">Kentucky</option>
+        <option value="LA">Louisiana</option>
+        <option value="ME">Maine</option>
+        <option value="MD">Maryland</option>
+        <option value="MA">Massachusetts</option>
+        <option value="MI">Michigan</option>
+        <option value="MN">Minnesota</option>
+        <option value="MS">Mississippi</option>
+        <option value="MO">Missouri</option>
+        <option value="MT">Montana</option>
+        <option value="NE">Nebraska</option>
+        <option value="NV">Nevada</option>
+        <option value="NH">New Hampshire</option>
+        <option value="NJ">New Jersey</option>
+        <option value="NM">New Mexico</option>
+        <option value="NY">New York</option>
+        <option value="NC">North Carolina</option>
+        <option value="ND">North Dakota</option>
+        <option value="OH">Ohio</option>
+        <option value="OK">Oklahoma</option>
+        <option value="OR">Oregon</option>
+        <option value="PA">Pennsylvania</option>
+        <option value="RI">Rhode Island</option>
+        <option value="SC">South Carolina</option>
+        <option value="SD">South Dakota</option>
+        <option value="TN">Tennessee</option>
+        <option value="TX">Texas</option>
+        <option value="UT">Utah</option>
+        <option value="VT">Vermont</option>
+        <option value="VA">Virginia</option>
+        <option value="WA" selected>Washington</option>
+        <option value="WV">West Virginia</option>
+        <option value="WI">Wisconsin</option>
+        <option value="WY">Wyoming</option>
+      </select>
+      <input type="text" id="site-search-input" placeholder="Type river name to filter…" oninput="filterSites()" autocomplete="off">
+    </div>
+    <span id="site-search-status"></span>
+    <div id="site-results"></div>
+  </div>
 
   <!-- River Tabs -->
   <nav class="river-tabs">
@@ -1317,15 +1416,16 @@
     </div>
     <div class="stat-card" id="card-wtemp">
       <div class="stat-label">Water Temp</div>
-      <div class="stat-value"><span class="skeleton" id="wtemp-val">--</span><span class="stat-unit" id="wtemp-unit">°F</span></div>
-      <div class="stat-delta" id="wtemp-note">USGS sensor</div>
+      <div class="stat-value"><span class="skeleton" id="wtemp-val">--</span><span class="stat-unit">°F</span></div>
+      <div class="stat-delta" id="wtemp-note">Loading…</div>
+      <div id="wtemp-est-wrap" style="display:none"><span class="wtemp-est-badge">ESTIMATED</span></div>
     </div>
     <div class="stat-card" id="card-airtemp">
       <div class="stat-label">Air Temp</div>
       <div class="stat-value"><span class="skeleton" id="airtemp-val">--</span><span class="stat-unit">°F</span></div>
       <div class="stat-delta" id="airtemp-note">Loading…</div>
     </div>
-    <div class="stat-card" id="card-temp" style="grid-column: 1 / -1;">
+    <div class="stat-card" id="card-temp" style="grid-column:1/-1">
       <div class="stat-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         Recommended Setups
         <span style="font-family:'IBM Plex Mono',monospace;font-size:0.5rem;background:rgba(125,211,252,0.1);color:var(--accent);border:1px solid rgba(125,211,252,0.3);padding:1px 6px;border-radius:2px;letter-spacing:0.1em">AI · Live Conditions</span>
@@ -1901,11 +2001,13 @@ const RIVERS = {
 let activeRiver = RIVERS.upperYakima;
 
 // ─── STATE ────────────────────────────────────────────────
+
+// ─── STATE ────────────────────────────────────────────────
 let flowData = [];
 let currentFlow = null;
 let currentGage = null;
-let currentWaterTemp = null;  // °F from USGS 00010
-let airTemp = null;           // °F from Open-Meteo
+let currentWaterTemp = null;
+let airTemp = null;
 let weatherData = null;
 
 // ─── SWITCH RIVER ─────────────────────────────────────────
@@ -1916,9 +2018,6 @@ function switchRiver(riverId) {
   document.querySelectorAll('.river-tab').forEach((btn, i) => {
     btn.classList.toggle('active', Object.keys(RIVERS)[i] === riverId);
   });
-
-  // Update page title
-  document.title = `${activeRiver.label} — PNW Fishing Dashboard`;
 
   // Update header
   const parts = activeRiver.label.split(' ');
@@ -1945,15 +2044,14 @@ function switchRiver(riverId) {
   flowData = []; currentFlow = null; currentGage = null;
   currentWaterTemp = null; airTemp = null; weatherData = null;
 
-  // Reset stat cards to skeleton
-  ['flow-val','gage-val','airtemp-val'].forEach(id => {
+  // Reset stat cards
+  ['flow-val','gage-val','wtemp-val','airtemp-val'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.textContent = '—'; el.classList.add('skeleton'); }
   });
-  const wtempEl = document.getElementById('wtemp-val');
-  if (wtempEl) { wtempEl.textContent = '--'; wtempEl.classList.add('skeleton'); }
-  document.getElementById('wtemp-note').textContent = 'USGS sensor';
-
+  const wb = document.getElementById('wtemp-est-wrap');
+  if (wb) wb.style.display = 'none';
+  document.title = activeRiver.label + ' — DriftScout';
   // Reset rig box
   document.getElementById('rig-setups').innerHTML = '<div style="color:var(--muted);font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace">asking Claude…</div>';
 
@@ -1977,7 +2075,6 @@ function timeAgo(isoStr) {
 }
 
 document.getElementById('current-date').textContent = formatDate();
-document.title = `${activeRiver.label} — PNW Fishing Dashboard`;
 
 // ─── USGS DATA ────────────────────────────────────────────
 async function fetchUSGS(riverId) {
@@ -2003,14 +2100,12 @@ async function fetchUSGS(riverId) {
 
   let dischargeVals = [];
   let gageVals = [];
-  let waterTempVals = [];
 
   for (const s of series) {
     const code = s.variable?.variableCode?.[0]?.value;
     const vals = s.values?.[0]?.value?.filter(v => v.value !== '-999999') || [];
     if (code === '00060') dischargeVals = vals;
     if (code === '00065') gageVals = vals;
-    if (code === '00010') waterTempVals = vals; // water temp in °C
   }
 
   // Bail if user switched to a different river while this was fetching
@@ -2050,33 +2145,31 @@ async function fetchUSGS(riverId) {
     document.getElementById('card-gage').classList.add('loaded');
   }
 
-  // Water temperature
-  const wtempEl = document.getElementById('wtemp-val');
-  const wtempNote = document.getElementById('wtemp-note');
-  if (waterTempVals.length) {
-    const latest = waterTempVals[waterTempVals.length - 1];
-    const tempC = parseFloat(latest.value);
-    const tempF = (tempC * 9/5) + 32;
-    currentWaterTemp = Math.round(tempF * 10) / 10;
-    if (wtempEl) {
-      wtempEl.textContent = currentWaterTemp.toFixed(1);
-      wtempEl.classList.remove('skeleton');
-    }
-    // Water temp fishing note
-    let tempTip = '';
-    if (currentWaterTemp < 40) tempTip = 'Slow — midges only';
-    else if (currentWaterTemp < 48) tempTip = 'Cold — fish deep & slow';
-    else if (currentWaterTemp < 55) tempTip = 'Good — trout active';
-    else if (currentWaterTemp < 62) tempTip = '★ Prime feeding range';
-    else if (currentWaterTemp < 68) tempTip = 'Warm — early/late only';
-    else tempTip = '⚠️ Stress temps — please release quickly';
-    if (wtempNote) wtempNote.textContent = tempTip;
-    document.getElementById('card-wtemp').classList.add('loaded');
-  } else {
-    // No water temp sensor at this gauge
-    if (wtempEl) { wtempEl.textContent = 'N/A'; wtempEl.classList.remove('skeleton'); }
-    if (wtempNote) wtempNote.textContent = 'No sensor at this gauge';
+  // Water temp
+  let waterTempVals = [];
+  for (const s of series) {
+    const code = s.variable?.variableCode?.[0]?.value;
+    const vals = s.values?.[0]?.value?.filter(v => v.value !== '-999999') || [];
+    if (code === '00010') waterTempVals = vals;
   }
+  const wtEl   = document.getElementById('wtemp-val');
+  const wtNote = document.getElementById('wtemp-note');
+  const wtEst  = document.getElementById('wtemp-est-wrap');
+  if (waterTempVals.length) {
+    const tempC = parseFloat(waterTempVals[waterTempVals.length - 1].value);
+    currentWaterTemp = Math.round(((tempC * 9/5) + 32) * 10) / 10;
+    if (wtEl)  { wtEl.textContent = currentWaterTemp.toFixed(1); wtEl.classList.remove('skeleton'); }
+    if (wtEst) wtEst.style.display = 'none';
+  } else {
+    currentWaterTemp = estimateWaterTemp();
+    if (wtEl)  { wtEl.textContent = currentWaterTemp ? currentWaterTemp.toFixed(1) : 'N/A'; wtEl.classList.remove('skeleton'); }
+    if (wtEst && currentWaterTemp) wtEst.style.display = 'block';
+  }
+  if (currentWaterTemp && wtNote) {
+    const t = currentWaterTemp;
+    wtNote.textContent = t < 40 ? 'Slow — midges only' : t < 48 ? 'Cold — fish slow & deep' : t < 55 ? 'Good — trout active' : t < 62 ? '★ Prime feeding temp' : t < 68 ? 'Warm — fish early/late' : '⚠️ Stress temps';
+  }
+  document.getElementById('card-wtemp').classList.add('loaded');
 
   updateWading();
   updateConditionBanner();
@@ -2094,13 +2187,11 @@ async function fetchWeather(riverId) {
   weatherData = json;
 
   const curr = json.current_weather;
-  airTemp = curr.temperature; // ← assign to module-level var (was missing!)
-
+  airTemp = curr.temperature;
   const el = document.getElementById('airtemp-val');
   el.textContent = Math.round(airTemp);
   el.classList.remove('skeleton');
   document.getElementById('card-airtemp').classList.add('loaded');
-
   const wind = curr.windspeed;
   document.getElementById('airtemp-note').textContent = `Wind ${Math.round(wind)} mph · ${curr.is_day ? 'Daytime' : 'Nighttime'}`;
 
@@ -2336,7 +2427,7 @@ async function generateInsights(riverId) {
 
   const flow     = currentFlow ? `${Math.round(currentFlow)} cfs` : 'unknown';
   const gage     = currentGage ? `${currentGage.toFixed(2)} ft` : 'unknown';
-  const wTemp    = currentWaterTemp ? `${currentWaterTemp}°F` : 'not available at this gauge';
+  const wTemp    = currentWaterTemp ? `${currentWaterTemp}°F` : 'not available';
   const aTemp    = airTemp ? `${Math.round(airTemp)}°F` : 'unknown';
   const month    = new Date().toLocaleString('en-US', { month:'long' });
   const hatches  = getHatches().filter(h => h.active).map(h => h.name).join(', ') || 'None strongly active';
@@ -2346,8 +2437,8 @@ async function generateInsights(riverId) {
 Current conditions (USGS #${activeRiver.usgs} — ${activeRiver.gaugeName}):
 - River flow: ${flow}
 - Gauge height: ${gage}
-- Water temperature: ${wTemp}
-- Air temperature: ${aTemp}
+- Water temp: ${wTemp}
+- Air temp: ${aTemp}
 - Month: ${month}
 - Active hatches: ${hatches}
 
@@ -2388,12 +2479,12 @@ Write in a confident, direct guide voice. Be specific — mention actual fly pat
 }
 
 // ─── RIG RECOMMENDATION (AI-powered) ─────────────────────
-async function fetchRigRecommendations(riverId) {
+async function fetchWaterTemp(riverId) {
   const container = document.getElementById('rig-setups');
 
   const flow    = currentFlow  ? `${Math.round(currentFlow)} cfs`  : 'unknown';
   const gage    = currentGage  ? `${currentGage.toFixed(2)} ft`    : 'unknown';
-  const wTemp   = currentWaterTemp ? `${currentWaterTemp}°F`        : 'not available at this gauge';
+  const wTemp   = currentWaterTemp ? `${currentWaterTemp}°F`        : 'unavailable';
   const aTemp   = airTemp      ? `${Math.round(airTemp)}°F`         : 'unknown';
   const hour    = new Date().getHours();
   const timeOfDay = hour < 6 ? 'pre-dawn' : hour < 10 ? 'morning' : hour < 14 ? 'midday' : hour < 18 ? 'afternoon' : 'evening';
@@ -2424,7 +2515,7 @@ Respond with ONLY a JSON array — no markdown, no explanation — in this exact
   }
 ]
 
-Be specific. Use real patterns that work on ${activeRiver.label}. Base everything on the live conditions.`;
+Be specific. Use real patterns that work on ${activeRiver.label}. Base everything on the live conditions.\`;
 
   try {
     const res = await fetch('https://yakima-proxy.ljlukelj.workers.dev/ai', {
@@ -2497,65 +2588,130 @@ Be specific. Use real patterns that work on ${activeRiver.label}. Base everythin
   document.getElementById('card-temp').classList.add('loaded');
 }
 
-// ─── BOOT ─────────────────────────────────────────────────
-async function loadAll() {
-  // Snapshot which river we're loading for
-  const riverSnapshot = activeRiver.id;
-
-  renderHatches();
-  renderAccessPoints();
-
-  // Reset skeletons
-  ['flow-val','gage-val','airtemp-val','wtemp-val'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.textContent = '—'; el.classList.add('skeleton'); }
-  });
-
-  try {
-    await Promise.all([fetchUSGS(riverSnapshot), fetchWeather(riverSnapshot)]);
-    if (activeRiver.id === riverSnapshot) {
-      fetchRigRecommendations(riverSnapshot);
-      generateInsights(riverSnapshot);
-    }
-  } catch(e) {
-    console.error('Data load error:', e);
-  }
+// ─── WATER TEMP ESTIMATION ───────────────────────────────
+function estimateWaterTemp() {
+  if (!airTemp) return null;
+  const month = new Date().getMonth();
+  const lag = [12,11,10,8,7,6,5,5,6,8,10,12][month];
+  return Math.round(Math.max(33, Math.min(75, airTemp - lag)) * 10) / 10;
 }
 
 // ─── MOON PHASE ───────────────────────────────────────────
-function getMoonPhase() {
-  const now = new Date();
-  // Known new moon reference: Jan 29, 2025
-  const knownNewMoon = new Date('2025-01-29T12:36:00Z');
-  const lunarCycle = 29.53058867; // days
-  const diff = (now - knownNewMoon) / (1000 * 60 * 60 * 24);
-  const phase = ((diff % lunarCycle) + lunarCycle) % lunarCycle;
-  const pct = phase / lunarCycle;
-
-  let emoji, name, tip;
-  if (pct < 0.03 || pct > 0.97)      { emoji = '🌑'; name = 'New Moon';        tip = 'Low light — insects hatch more freely'; }
-  else if (pct < 0.22)                { emoji = '🌒'; name = 'Waxing Crescent'; tip = 'Good evening fishing as light fades'; }
-  else if (pct < 0.28)                { emoji = '🌓'; name = 'First Quarter';   tip = 'Active feeding periods, good all day'; }
-  else if (pct < 0.47)                { emoji = '🌔'; name = 'Waxing Gibbous';  tip = 'Terrestrials working well this phase'; }
-  else if (pct < 0.53)                { emoji = '🌕'; name = 'Full Moon';       tip = 'Fish feed heavily at dawn and dusk'; }
-  else if (pct < 0.72)                { emoji = '🌖'; name = 'Waning Gibbous';  tip = 'Midday hatches often strongest'; }
-  else if (pct < 0.78)                { emoji = '🌗'; name = 'Last Quarter';    tip = 'Good morning fishing, fish rising early'; }
-  else                                 { emoji = '🌘'; name = 'Waning Crescent'; tip = 'Nymphing often outperforms dries'; }
-
-  return { emoji, name, tip, phase: Math.round(phase) };
-}
-
 function renderMoonPhase() {
-  const moon = getMoonPhase();
+  const ref = new Date('2025-01-29T12:36:00Z');
+  const phase = (((Date.now() - ref) / 86400000) % 29.53 + 29.53) % 29.53;
+  const p = phase / 29.53;
+  const [emoji, name, tip] = p < 0.03 ? ['🌑','New Moon','Low light — insects hatch freely']
+    : p < 0.22 ? ['🌒','Waxing Crescent','Good evening fishing']
+    : p < 0.28 ? ['🌓','First Quarter','Active feeding all day']
+    : p < 0.47 ? ['🌔','Waxing Gibbous','Terrestrials working well']
+    : p < 0.53 ? ['🌕','Full Moon','Heavy feeding at dawn/dusk']
+    : p < 0.72 ? ['🌖','Waning Gibbous','Midday hatches strongest']
+    : p < 0.78 ? ['🌗','Last Quarter','Good early morning fishing']
+    : ['🌘','Waning Crescent','Nymphing often best'];
   const el = document.getElementById('moon-phase');
-  if (el) {
-    el.innerHTML = `<span title="${moon.tip}">${moon.emoji} ${moon.name} · Day ${moon.phase}</span>`;
-    el.title = moon.tip;
-    el.style.cursor = 'help';
-  }
+  if (el) el.innerHTML = `<span title="${tip}" style="cursor:help">${emoji} ${name} &middot; Day ${Math.round(phase)}</span>`;
 }
 
-renderMoonPhase();
+// ─── NATIONWIDE RIVER SEARCH ──────────────────────────────
+let allSites = [], searchTimer = null;
+
+async function onStatePick() {
+  const state = document.getElementById('state-picker').value;
+  const status = document.getElementById('site-search-status');
+  const results = document.getElementById('site-results');
+  const input = document.getElementById('site-search-input');
+  if (!state) return;
+  allSites = []; results.innerHTML = ''; input.value = '';
+  status.textContent = 'Loading gauges for ' + state + '...';
+  try {
+    const url = `https://waterservices.usgs.gov/nwis/site/?format=rdb&stateCd=${state}&siteType=ST&hasDataTypeCd=iv&siteStatus=active`;
+    const res = await fetch(url);
+    const text = await res.text();
+    allSites = text.split('\n')
+      .filter(l => l && !l.startsWith('#') && !l.startsWith('agency') && !l.startsWith('5s') && l.includes('\t'))
+      .map(l => { const c = l.split('\t'); return { id: c[1], name: c[2], lat: c[4], lon: c[5] }; })
+      .filter(s => s.id && s.name && s.id.length >= 8);
+    status.textContent = allSites.length + ' active gauges — type to filter';
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+}
+
+function filterSites() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const q = document.getElementById('site-search-input').value.toLowerCase().trim();
+    const results = document.getElementById('site-results');
+    if (!q || !allSites.length) { results.innerHTML = ''; return; }
+    const hits = allSites.filter(s => s.name.toLowerCase().includes(q)).slice(0, 50);
+    if (!hits.length) { results.innerHTML = '<div class="site-result-item"><div class="site-result-name" style="color:var(--muted)">No matches</div></div>'; return; }
+    results.innerHTML = hits.map(s =>
+      `<div class="site-result-item" onclick="loadCustomRiver('${s.id}','${s.name.replace(/'/g,\"\\'\")}',${ s.lat},${ s.lon})">`+
+      `<div class="site-result-name">${s.name}</div>`+
+      `<div class="site-result-id">USGS #${s.id} &middot; ${parseFloat(s.lat).toFixed(3)}N</div></div>`
+    ).join('');
+  }, 200);
+}
+
+function loadCustomRiver(siteId, siteName, lat, lon) {
+  document.getElementById('site-results').innerHTML = '';
+  document.getElementById('site-search-input').value = siteName;
+  document.getElementById('site-search-status').textContent = 'Loaded: ' + siteName;
+  document.querySelectorAll('.river-tab').forEach(b => b.classList.remove('active'));
+  activeRiver = {
+    id: 'custom_' + siteId, label: siteName, sublabel: 'USGS #' + siteId,
+    usgs: siteId, gaugeName: siteName,
+    lat: parseFloat(lat), lon: parseFloat(lon),
+    wadingThresholds: { easy:500, moderate:1200, difficult:2500, floatOnly:4000 },
+    hatches: [], accessPoints: [],
+    hatchLabel: 'Hatches — ' + siteName,
+    accessLabel: 'Access — ' + siteName,
+    aiContext: siteName + ' (USGS #' + siteId + ')',
+    insightTip: 'Any seasonal patterns, typical fish species, or notable access information for this gauge location',
+  };
+  const parts = siteName.split(' ');
+  document.getElementById('river-title').innerHTML = parts.slice(0,-1).join(' ') + ' <em>' + parts[parts.length-1] + '</em>';
+  document.getElementById('river-subtitle').innerHTML = '🎣 ' + siteName + ' &nbsp;&middot;&nbsp; USGS #' + siteId;
+  document.getElementById('gauge-label').textContent = 'USGS #' + siteId;
+  document.getElementById('hatch-label').textContent = 'Hatches — ' + siteName;
+  document.getElementById('access-label').textContent = 'Access — ' + siteName;
+  document.getElementById('gage-note').textContent = siteName;
+  document.getElementById('airtemp-note').textContent = siteName;
+  document.getElementById('footer-gauge').textContent = 'Flow: USGS #' + siteId;
+  document.title = siteName + ' — DriftScout';
+  flowData=[]; currentFlow=null; currentGage=null; currentWaterTemp=null; airTemp=null;
+  ['flow-val','gage-val','wtemp-val','airtemp-val'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '—'; el.classList.add('skeleton'); }
+  });
+  document.getElementById('rig-setups').innerHTML = '<div style="color:var(--muted);font-size:0.8rem">asking Claude…</div>';
+  document.getElementById('insights-content').innerHTML = '<div class="insights-loading"><div class="spinner"></div><span>Generating report…</span></div>';
+  document.getElementById('hatch-grid').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:8px 0">Hatch data available for preset PNW rivers.</div>';
+  document.getElementById('access-list').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:8px 0">Access points available for preset PNW rivers.</div>';
+  const snap = activeRiver.id;
+  Promise.all([fetchUSGS(snap), fetchWeather(snap)]).then(() => {
+    if (activeRiver.id === snap) { fetchWaterTemp(snap); generateInsights(snap); }
+  });
+}
+
+// ─── BOOT ─────────────────────────────────────────────────
+async function loadAll() {
+  const riverSnapshot = activeRiver.id;
+  renderHatches();
+  renderAccessPoints();
+  renderMoonPhase();
+  document.title = activeRiver.label + ' — DriftScout';
+  ['flow-val','gage-val','wtemp-val','airtemp-val'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '—'; el.classList.add('skeleton'); }
+  });
+  try {
+    await Promise.all([fetchUSGS(riverSnapshot), fetchWeather(riverSnapshot)]);
+    if (activeRiver.id === riverSnapshot) {
+      fetchWaterTemp(riverSnapshot);
+      generateInsights(riverSnapshot);
+    }
+  } catch(e) { console.error('Data load error:', e); }
+}
 
 loadAll();
 
@@ -2573,346 +2729,157 @@ function switchMode(mode) {
     if (el) el.style.display = m === mode ? 'block' : 'none';
   });
   if (mode === 'knots') renderKnots();
-  if (mode === 'triplog') {
-    setDefaultDate();
-    // Auto-fill current flow and river from dashboard
-    if (currentFlow) {
-      const flowInput = document.getElementById('log-flow');
-      if (flowInput && !flowInput.value) flowInput.value = Math.round(currentFlow);
-    }
-    // Pre-select current river
-    const riverSelect = document.getElementById('log-river');
-    if (riverSelect) {
-      const riverLabel = activeRiver.label;
-      for (const opt of riverSelect.options) {
-        if (opt.value.includes(riverLabel.split(' ')[1] || riverLabel.split(' ')[0])) {
-          riverSelect.value = opt.value;
-          break;
-        }
-      }
-    }
-    renderTripLog();
-  }
+  if (mode === 'triplog') { setDefaultDate(); renderTripLog(); }
   if (mode === 'regs') renderRegs();
   if (mode === 'calc') { calcLeader(); calcHook(); calcWeight(); }
   if (mode === 'shops') renderShops();
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════
 // KNOTS
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════
 const KNOTS = [
   {
     name: 'Improved Clinch Knot',
     use: 'Fly to tippet',
     strength: '95%',
+    tip: 'Wet the knot before tightening — dry mono burns weak.',
     steps: [
       'Thread 6" of tippet through the hook eye.',
-      'Wrap the tag end around the standing line 5–6 times.',
-      'Pass the tag end through the loop just above the eye.',
-      'Then pass it through the large loop you just created.',
-      'Moisten and pull the standing line to cinch tight. Trim tag end.',
+      'Double back and make 5-6 wraps around the standing line.',
+      'Pass the tag end through the small loop above the eye.',
+      'Pass tag end through the large loop you just made.',
+      'Moisten, pull standing line slowly to cinch. Trim tag end.'
     ],
-    draw: (svg, progress) => drawImprovedClinch(svg, progress),
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="100" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="120" cy="35" rx="14" ry="9" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M120 26 C138 10 165 12 168 28 C172 12 195 8 200 24 C205 40 192 52 178 48 C172 58 150 60 140 48 C128 56 112 48 120 26Z" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/><line x1="170" y1="48" x2="310" y2="35" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><text x="10" y="62" fill="#475569" font-family="monospace" font-size="8">standing line</text><text x="250" y="62" fill="#475569" font-family="monospace" font-size="8">tag end</text></svg>'
   },
   {
-    name: 'Surgeon\'s Knot',
-    use: 'Tippet to leader / joining lines',
+    name: "Surgeon's Knot",
+    use: 'Joining tippet to leader',
     strength: '90%',
+    tip: 'Pull all four ends simultaneously for an even, strong knot.',
     steps: [
-      'Overlap 6" of the two lines parallel to each other.',
-      'Make a loop from both lines together.',
-      'Pass both tag ends through the loop twice.',
-      'Moisten well and pull all four ends simultaneously.',
-      'Trim both tag ends close.',
+      'Overlap 6" of tippet alongside the leader end.',
+      'Form a loop with both lines together.',
+      'Pass both tag ends through the loop — twice.',
+      'Moisten. Pull all four ends firmly and evenly.',
+      'Trim both tag ends close.'
     ],
-    draw: (svg, progress) => drawSurgeonsKnot(svg, progress),
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="28" x2="110" y2="28" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><line x1="10" y1="42" x2="110" y2="42" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/><path d="M110 28 C128 28 150 8 170 8 C190 8 210 28 210 28 C210 42 190 58 170 58 C150 58 130 42 110 42" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M110 42 C128 42 148 58 170 58" fill="none" stroke="#f59e0b" stroke-width="2"/><line x1="210" y1="28" x2="310" y2="28" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><line x1="210" y1="42" x2="310" y2="42" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/><text x="10" y="66" fill="#475569" font-family="monospace" font-size="8">leader</text><text x="260" y="66" fill="#475569" font-family="monospace" font-size="8">tippet</text></svg>'
+  },
+  {
+    name: 'Non-Slip Loop Knot',
+    use: 'Fly to tippet — gives fly free movement',
+    strength: '95%',
+    tip: 'Small loop for nymphs, 1/4" loop for streamers and wet flies.',
+    steps: [
+      'Tie a loose overhand knot 4" from tag end. Do not tighten.',
+      'Thread tag end through the hook eye.',
+      'Pass tag end back through the overhand loop (same direction).',
+      'Wrap tag end 4-6 times around the standing line.',
+      'Pass tag end back through the overhand loop again.',
+      'Moisten, pull standing line to set loop size. Trim tag.'
+    ],
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="80" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><path d="M80 35 C92 18 118 18 118 35 C118 52 92 52 80 35" fill="none" stroke="#7dd3fc" stroke-width="2"/><line x1="118" y1="35" x2="175" y2="35" stroke="#7dd3fc" stroke-width="2.5"/><ellipse cx="196" cy="35" rx="13" ry="9" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M175 35 C185 16 205 14 216 26 C226 14 244 18 246 32 C248 46 236 56 224 50 C218 60 200 62 192 52 C182 58 172 50 175 35" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linejoin="round"/><text x="30" y="62" fill="#475569" font-family="monospace" font-size="8">loop stays open</text><text x="222" y="62" fill="#475569" font-family="monospace" font-size="8">eye</text></svg>'
   },
   {
     name: 'Perfection Loop',
-    use: 'Loop on leader butt — loop-to-loop connection',
+    use: 'Leader butt loop-to-loop connection',
     strength: '85%',
+    tip: 'Keep the loop small and tight — a sloppy loop twists the leader.',
     steps: [
-      'Make a loop, holding the crossing point between thumb and forefinger.',
-      'Make a second loop in front of the first.',
+      'Make Loop A, hold the crossing point.',
+      'Make Loop B in front of Loop A.',
       'Pass the tag end between the two loops.',
-      'Pull the second (front) loop through the first loop.',
-      'Tighten by pulling the loop and standing line in opposite directions.',
+      'Reach through Loop A and pull Loop B through it.',
+      'Pull Loop B and standing line in opposite directions to tighten.'
     ],
-    draw: (svg, progress) => drawPerfectionLoop(svg, progress),
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="70" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><path d="M70 35 C82 14 116 14 120 35 C124 56 108 62 98 52 C88 62 72 54 80 42" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/><ellipse cx="104" cy="22" rx="16" ry="10" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="3,2"/><line x1="120" y1="35" x2="310" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><text x="88" y="12" fill="#22c55e" font-family="monospace" font-size="8">loop</text><text x="200" y="62" fill="#475569" font-family="monospace" font-size="8">standing line</text></svg>'
   },
   {
     name: 'Blood Knot',
     use: 'Joining two lines of similar diameter',
     strength: '90%',
+    tip: 'Works best when lines are within one X size of each other.',
     steps: [
-      'Overlap the two lines by 6". Hold crossing point.',
-      'Wrap one tag end around the other line 5 times.',
-      'Bring the tag end back through the center crossing.',
-      'Repeat on the other side — 5 wraps in opposite direction.',
-      'Pass that tag end through the same center opening (opposite direction).',
-      'Moisten and pull both standing lines. Trim tags.',
+      'Overlap the two lines by 6". Hold the crossing point.',
+      'Wrap one tag end 5 times around the other line.',
+      'Bring that tag end through the center crossing.',
+      'Repeat on the other side — 5 wraps opposite direction.',
+      'Pass that tag end through center in the opposite direction.',
+      'Moisten, pull both standing lines. Trim both tags.'
     ],
-    draw: (svg, progress) => drawBloodKnot(svg, progress),
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="110" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><line x1="210" y1="35" x2="310" y2="35" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="124" cy="35" rx="5" ry="15" fill="none" stroke="#7dd3fc" stroke-width="1.8"/><ellipse cx="138" cy="35" rx="5" ry="15" fill="none" stroke="#7dd3fc" stroke-width="1.8"/><ellipse cx="152" cy="35" rx="5" ry="15" fill="none" stroke="#7dd3fc" stroke-width="1.8"/><ellipse cx="168" cy="35" rx="5" ry="15" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="182" cy="35" rx="5" ry="15" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="196" cy="35" rx="5" ry="15" fill="none" stroke="#f59e0b" stroke-width="1.8"/><line x1="160" y1="20" x2="160" y2="50" stroke="#22c55e" stroke-width="2"/><text x="10" y="64" fill="#475569" font-family="monospace" font-size="8">heavier line</text><text x="248" y="64" fill="#475569" font-family="monospace" font-size="8">tippet</text></svg>'
   },
   {
     name: 'Nail Knot',
     use: 'Fly line to leader butt',
     strength: '95%',
+    tip: 'Use a small drinking straw instead of a nail — much easier.',
     steps: [
-      'Hold a small tube (or nail) alongside the fly line tip.',
-      'Lay the leader butt alongside, leaving 8" of tag end.',
-      'Wrap the tag end around line, leader, and tube 6–8 times.',
-      'Pass the tag end back through the tube; remove tube.',
-      'Moisten and tighten by pulling both tag end and leader.',
-      'Trim close. Test with firm tug.',
+      'Hold a small tube alongside the fly line tip.',
+      'Lay leader butt alongside, leaving 8" of tag end.',
+      'Wrap tag end tightly around all three 6-8 times.',
+      'Thread tag end through the tube, then remove tube.',
+      'Moisten and pull both ends to tighten. Trim close.'
     ],
-    draw: (svg, progress) => drawNailKnot(svg, progress),
-  },
-  {
-    name: 'Non-Slip Loop Knot',
-    use: 'Fly to tippet — allows fly to swing freely',
-    strength: '95%',
-    steps: [
-      'Tie an overhand knot 4" from tag end. Do not tighten.',
-      'Thread the tag end through the hook eye.',
-      'Pass tag end back through the overhand knot loop.',
-      'Wrap the tag end around the standing line 4–6 times.',
-      'Pass the tag end back through the overhand knot loop.',
-      'Moisten and pull standing line to set. Trim tag.',
-    ],
-    draw: (svg, progress) => drawLoopKnot(svg, progress),
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="260" height="10" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/><line x1="270" y1="35" x2="310" y2="35" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/><ellipse cx="110" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="124" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="138" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="152" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="166" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><text x="10" y="62" fill="#475569" font-family="monospace" font-size="8">fly line (thick)</text><text x="270" y="62" fill="#475569" font-family="monospace" font-size="8">leader</text></svg>'
   },
   {
     name: 'Davy Knot',
-    use: 'Fast fly attachment — strong and simple',
+    use: 'Fast fly attachment',
     strength: '85%',
+    tip: 'Fastest knot to tie streamside. Great for quick fly changes.',
     steps: [
-      'Thread tippet through eye and form a loop.',
+      'Thread tippet through hook eye, leaving 5" of tag.',
+      'Form a loop with the tag end over the standing line.',
       'Pass the tag end through the loop once.',
-      'Bring the tag end over the standing line and back through the first loop.',
-      'Moisten and pull the standing line to cinch tight.',
-      'Trim tag end very close.',
+      'Bring tag end over standing line and back through the loop.',
+      'Moisten. Pull standing line firmly. Trim tag very close.'
     ],
-    draw: (svg, progress) => drawDavyKnot(svg, progress),
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="150" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="172" cy="35" rx="14" ry="9" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M172 26 C190 12 214 20 212 34 C210 48 192 54 180 46" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><path d="M180 46 C172 52 164 46 166 38 C168 30 176 28 182 34" fill="none" stroke="#f59e0b" stroke-width="2"/><line x1="212" y1="34" x2="310" y2="35" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><text x="10" y="62" fill="#475569" font-family="monospace" font-size="8">standing line</text><text x="248" y="62" fill="#475569" font-family="monospace" font-size="8">cinch tight</text></svg>'
   },
   {
     name: 'Arbor Knot',
     use: 'Backing to reel arbor',
     strength: '70%',
+    tip: 'Only needs to hold backing tension, not fight fish directly.',
     steps: [
-      'Wrap backing around the reel arbor.',
+      'Pass backing around the reel arbor.',
       'Tie an overhand knot in the tag end around the standing line.',
-      'Tie a second overhand knot in the tag end alone (stopper knot).',
-      'Pull the standing line so the first knot slides to the arbor.',
-      'The stopper knot prevents pulling through. Trim close.',
+      'Tie a second overhand knot in the tag end alone (stopper).',
+      'Pull standing line to slide first knot to the arbor.',
+      'Stopper knot prevents pull-through. Trim close.'
     ],
-    draw: (svg, progress) => drawArborKnot(svg, progress),
-  },
+    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="18" width="56" height="34" rx="8" fill="#1c2430" stroke="#2d3748" stroke-width="2"/><rect x="20" y="26" width="36" height="18" rx="4" fill="#161b22" stroke="#3b82f6" stroke-width="1.5"/><line x1="66" y1="35" x2="120" y2="35" stroke="#7dd3fc" stroke-width="2.5"/><path d="M120 35 C132 18 158 18 158 35 C158 52 132 52 120 35" fill="none" stroke="#7dd3fc" stroke-width="2"/><line x1="158" y1="35" x2="196" y2="35" stroke="#7dd3fc" stroke-width="2.5"/><path d="M196 35 C206 24 218 24 218 35 C218 46 206 46 196 35" fill="none" stroke="#f59e0b" stroke-width="2"/><line x1="218" y1="35" x2="310" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><text x="14" y="64" fill="#475569" font-family="monospace" font-size="8">reel</text><text x="250" y="64" fill="#475569" font-family="monospace" font-size="8">backing line</text></svg>'
+  }
 ];
 
-function drawImprovedClinch(svg, p) {
-  const w = 280, h = 90;
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  const prog = p || 1;
-  // Main line
-  line(svg, 10, 45, 200, 45, '#7dd3fc', 2.5);
-  // Eye
-  circle(svg, 215, 45, 10, 'none', '#7dd3fc', 2);
-  // Thread through eye
-  if (prog > 0.1) line(svg, 215, 45, 240, 30, '#f59e0b', 2);
-  // Wraps
-  const wraps = Math.floor(prog * 5);
-  for (let i = 0; i < wraps; i++) {
-    const x = 200 - i * 10;
-    arc(svg, x, 45, 14, '#f59e0b', 1.8);
-  }
-  if (prog > 0.8) {
-    line(svg, 240, 30, 240, 58, '#f59e0b', 2);
-    line(svg, 240, 58, 255, 45, '#22c55e', 2);
-  }
-}
-
-function drawSurgeonsKnot(svg, p) {
-  const prog = p || 1;
-  svg.setAttribute('viewBox', '0 0 280 90');
-  line(svg, 10, 38, 270, 38, '#7dd3fc', 2.5);
-  line(svg, 10, 52, 270, 52, '#f59e0b', 2.5);
-  if (prog > 0.3) {
-    path(svg, 'M 100 38 C 120 10, 160 10, 180 38', '#7dd3fc', 2, 'none');
-    path(svg, 'M 100 52 C 120 78, 160 78, 180 52', '#f59e0b', 2, 'none');
-  }
-  if (prog > 0.7) {
-    path(svg, 'M 110 38 C 130 5, 170 5, 170 38', '#7dd3fc', 1.5, 'none');
-    path(svg, 'M 110 52 C 130 83, 170 83, 170 52', '#f59e0b', 1.5, 'none');
-  }
-}
-
-function drawPerfectionLoop(svg, p) {
-  const prog = p || 1;
-  svg.setAttribute('viewBox', '0 0 280 90');
-  line(svg, 10, 45, 80, 45, '#7dd3fc', 2.5);
-  if (prog > 0.2) path(svg, 'M 80 45 C 100 10, 150 10, 150 45', '#7dd3fc', 2.5, 'none');
-  if (prog > 0.4) path(svg, 'M 80 45 C 100 78, 140 78, 140 55', '#7dd3fc', 2, 'none');
-  if (prog > 0.7) {
-    path(svg, 'M 140 55 C 145 42, 155 35, 150 45', '#22c55e', 2, 'none');
-    line(svg, 150, 45, 270, 45, '#7dd3fc', 2.5);
-    circle(svg, 115, 28, 16, 'none', '#22c55e', 2);
-  }
-}
-
-function drawBloodKnot(svg, p) {
-  const prog = p || 1;
-  svg.setAttribute('viewBox', '0 0 280 90');
-  line(svg, 10, 45, 100, 45, '#7dd3fc', 2.5);
-  line(svg, 180, 45, 270, 45, '#f59e0b', 2.5);
-  const wraps = Math.floor(prog * 5);
-  for (let i = 0; i < wraps; i++) {
-    arc(svg, 130 - i * 8, 45, 14, '#7dd3fc', 1.8);
-    arc(svg, 150 + i * 8, 45, 14, '#f59e0b', 1.8);
-  }
-  if (prog > 0.8) {
-    line(svg, 140, 31, 140, 59, '#22c55e', 2);
-  }
-}
-
-function drawNailKnot(svg, p) {
-  const prog = p || 1;
-  svg.setAttribute('viewBox', '0 0 280 90');
-  line(svg, 10, 45, 270, 45, '#7dd3fc', 4);
-  const wraps = Math.floor(prog * 7);
-  for (let i = 0; i < wraps; i++) {
-    arc(svg, 100 + i * 10, 45, 10, '#f59e0b', 1.8);
-  }
-  if (prog > 0.9) line(svg, 165, 45, 250, 30, '#22c55e', 2);
-}
-
-function drawLoopKnot(svg, p) {
-  const prog = p || 1;
-  svg.setAttribute('viewBox', '0 0 280 90');
-  if (prog > 0.15) path(svg, 'M 60 45 C 75 22, 105 22, 100 45', '#7dd3fc', 2, 'none');
-  line(svg, 10, 45, 170, 45, '#7dd3fc', 2.5);
-  circle(svg, 195, 45, 10, 'none', '#f59e0b', 2);
-  if (prog > 0.4) line(svg, 195, 45, 220, 30, '#7dd3fc', 2);
-  if (prog > 0.6) {
-    path(svg, 'M 220 30 C 240 15, 255 30, 245 45', '#7dd3fc', 2, 'none');
-    circle(svg, 210, 30, 10, 'none', '#22c55e', 1.5);
-  }
-}
-
-function drawDavyKnot(svg, p) {
-  const prog = p || 1;
-  svg.setAttribute('viewBox', '0 0 280 90');
-  line(svg, 10, 45, 180, 45, '#7dd3fc', 2.5);
-  circle(svg, 205, 45, 12, 'none', '#7dd3fc', 2);
-  if (prog > 0.3) path(svg, 'M 205 33 C 230 20, 245 38, 230 45', '#f59e0b', 2, 'none');
-  if (prog > 0.7) {
-    path(svg, 'M 230 45 C 240 55, 220 62, 210 52', '#f59e0b', 2, 'none');
-    line(svg, 210, 52, 255, 45, '#22c55e', 2);
-  }
-}
-
-function drawArborKnot(svg, p) {
-  const prog = p || 1;
-  svg.setAttribute('viewBox', '0 0 280 90');
-  // Reel arbor
-  rect(svg, 20, 25, 50, 40, '#1c2430', '#2d3748', 4);
-  line(svg, 70, 45, 270, 45, '#7dd3fc', 2.5);
-  if (prog > 0.3) path(svg, 'M 100 45 C 115 20, 145 20, 145 45 C 145 68, 115 68, 100 45', '#f59e0b', 2, 'none');
-  if (prog > 0.7) {
-    path(svg, 'M 165 45 C 175 32, 185 32, 185 45', '#f59e0b', 2, 'none');
-    circle(svg, 178, 52, 6, 'none', '#22c55e', 2);
-  }
-}
-
-// SVG helpers
-function line(svg, x1, y1, x2, y2, color, w) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg','line');
-  el.setAttribute('x1',x1); el.setAttribute('y1',y1);
-  el.setAttribute('x2',x2); el.setAttribute('y2',y2);
-  el.setAttribute('stroke',color); el.setAttribute('stroke-width',w);
-  el.setAttribute('stroke-linecap','round');
-  svg.appendChild(el); return el;
-}
-function circle(svg, cx, cy, r, fill, stroke, w) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
-  el.setAttribute('cx',cx); el.setAttribute('cy',cy); el.setAttribute('r',r);
-  el.setAttribute('fill',fill); el.setAttribute('stroke',stroke); el.setAttribute('stroke-width',w);
-  svg.appendChild(el); return el;
-}
-function arc(svg, cx, cy, r, color, w) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
-  el.setAttribute('cx',cx); el.setAttribute('cy',cy);
-  el.setAttribute('rx',5); el.setAttribute('ry',r);
-  el.setAttribute('fill','none'); el.setAttribute('stroke',color); el.setAttribute('stroke-width',w);
-  svg.appendChild(el); return el;
-}
-function path(svg, d, color, w, fill='none') {
-  const el = document.createElementNS('http://www.w3.org/2000/svg','path');
-  el.setAttribute('d',d); el.setAttribute('stroke',color);
-  el.setAttribute('stroke-width',w); el.setAttribute('fill',fill);
-  el.setAttribute('stroke-linecap','round'); el.setAttribute('stroke-linejoin','round');
-  svg.appendChild(el); return el;
-}
-function rect(svg, x, y, w, h, fill, stroke, r) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg','rect');
-  el.setAttribute('x',x); el.setAttribute('y',y);
-  el.setAttribute('width',w); el.setAttribute('height',h);
-  el.setAttribute('fill',fill); el.setAttribute('stroke',stroke);
-  el.setAttribute('stroke-width',2); el.setAttribute('rx',r||0);
-  svg.appendChild(el); return el;
+function toggleKnot(i) {
+  document.getElementById('kc-' + i).classList.toggle('open');
 }
 
 function renderKnots() {
   const grid = document.getElementById('knot-grid');
-  if (grid.children.length > 0) return; // already rendered
+  if (grid.children.length > 0) return;
   grid.innerHTML = KNOTS.map((k, i) => `
-    <div class="knot-card">
+    <div class="knot-card" id="kc-${i}" onclick="toggleKnot(${i})">
       <div class="knot-header">
         <div>
           <div class="knot-name">${k.name}</div>
           <div class="knot-use">${k.use}</div>
         </div>
-        <div class="knot-strength"><span>Strength</span>${k.strength}</div>
+        <div class="knot-right-meta">
+          <span class="knot-strength-pct">Strength: ${k.strength}</span>
+          <span class="knot-chevron">&#9660;</span>
+        </div>
       </div>
-      <div class="knot-svg-area" id="knot-svg-area-${i}" onclick="animateKnot(${i})">
-        <svg id="knot-svg-${i}" xmlns="http://www.w3.org/2000/svg"></svg>
-        <button class="knot-animate-btn">▶ Animate</button>
+      <div class="knot-body">
+        <div class="knot-diagram">${k.svg}</div>
+        ${k.steps.map((s, si) => `<div class="knot-step-row"><div class="knot-step-n">${si+1}</div><div>${s}</div></div>`).join('')}
+        <div class="knot-pro-tip">&#128161; ${k.tip}</div>
       </div>
-      <div class="knot-steps">
-        ${k.steps.map((s, si) => `
-          <div class="knot-step">
-            <span class="knot-step-num">${si+1}.</span>
-            <span>${s}</span>
-          </div>`).join('')}
-      </div>
-    </div>
-  `).join('');
-
-  // Draw all knots at full completion
-  KNOTS.forEach((k, i) => {
-    const svg = document.getElementById('knot-svg-' + i);
-    k.draw(svg, 1);
-  });
-}
-
-const knotAnimations = {};
-function animateKnot(i) {
-  if (knotAnimations[i]) return;
-  const svg = document.getElementById('knot-svg-' + i);
-  const knot = KNOTS[i];
-  let progress = 0;
-  svg.innerHTML = '';
-  knotAnimations[i] = true;
-  const interval = setInterval(() => {
-    svg.innerHTML = '';
-    progress = Math.min(1, progress + 0.025);
-    knot.draw(svg, progress);
-    if (progress >= 1) {
-      clearInterval(interval);
-      delete knotAnimations[i];
-    }
-  }, 40);
+    </div>`).join('');
 }
 
 // ═══════════════════════════════════════════════════════════
