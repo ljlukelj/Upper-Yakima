@@ -2738,133 +2738,93 @@ function switchMode(mode) {
 }
 
 // ═════════════════════════════════════════════════════════
-// KNOTS
+// KNOTS — 3D Three.js rope simulations
 // ═════════════════════════════════════════════════════════
-const KNOTS = [
+const KNOT_DATA = [
   {
     name: 'Improved Clinch Knot',
-    use: 'Fly to tippet',
+    use: 'Fly to tippet — most common knot in fly fishing',
     strength: '95%',
-    tip: 'Wet the knot before tightening — dry mono burns weak.',
-    steps: [
-      'Thread 6" of tippet through the hook eye.',
-      'Double back and make 5-6 wraps around the standing line.',
-      'Pass the tag end through the small loop above the eye.',
-      'Pass tag end through the large loop you just made.',
-      'Moisten, pull standing line slowly to cinch. Trim tag end.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="100" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="120" cy="35" rx="14" ry="9" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M120 26 C138 10 165 12 168 28 C172 12 195 8 200 24 C205 40 192 52 178 48 C172 58 150 60 140 48 C128 56 112 48 120 26Z" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/><line x1="170" y1="48" x2="310" y2="35" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><text x="10" y="62" fill="#475569" font-family="monospace" font-size="8">standing line</text><text x="250" y="62" fill="#475569" font-family="monospace" font-size="8">tag end</text></svg>'
+    tip: 'Wet before tightening. 5 wraps for mono under 8lb, 6 for heavier.',
+    steps: ['Thread 6" through the hook eye.','Make 5-6 wraps around the standing line.','Pass tag end through the loop above the eye.','Pass tag end through the large loop just made.','Moisten, pull standing line slowly. Trim tag end.'],
+    type: 'clinch'
   },
   {
     name: "Surgeon's Knot",
-    use: 'Joining tippet to leader',
+    use: 'Joining tippet to leader — fast and bombproof',
     strength: '90%',
-    tip: 'Pull all four ends simultaneously for an even, strong knot.',
-    steps: [
-      'Overlap 6" of tippet alongside the leader end.',
-      'Form a loop with both lines together.',
-      'Pass both tag ends through the loop — twice.',
-      'Moisten. Pull all four ends firmly and evenly.',
-      'Trim both tag ends close.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="28" x2="110" y2="28" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><line x1="10" y1="42" x2="110" y2="42" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/><path d="M110 28 C128 28 150 8 170 8 C190 8 210 28 210 28 C210 42 190 58 170 58 C150 58 130 42 110 42" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M110 42 C128 42 148 58 170 58" fill="none" stroke="#f59e0b" stroke-width="2"/><line x1="210" y1="28" x2="310" y2="28" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><line x1="210" y1="42" x2="310" y2="42" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/><text x="10" y="66" fill="#475569" font-family="monospace" font-size="8">leader</text><text x="260" y="66" fill="#475569" font-family="monospace" font-size="8">tippet</text></svg>'
+    tip: 'Pull all four ends simultaneously for an even seat.',
+    steps: ['Overlap 6" of tippet alongside leader.','Form a loop with both lines together.','Pass both tag ends through the loop twice.','Moisten. Pull all four ends firmly and evenly.','Trim both tags close.'],
+    type: 'surgeons'
   },
   {
     name: 'Non-Slip Loop Knot',
-    use: 'Fly to tippet — gives fly free movement',
+    use: 'Fly to tippet — lets fly swing freely in current',
     strength: '95%',
-    tip: 'Small loop for nymphs, 1/4" loop for streamers and wet flies.',
-    steps: [
-      'Tie a loose overhand knot 4" from tag end. Do not tighten.',
-      'Thread tag end through the hook eye.',
-      'Pass tag end back through the overhand loop (same direction).',
-      'Wrap tag end 4-6 times around the standing line.',
-      'Pass tag end back through the overhand loop again.',
-      'Moisten, pull standing line to set loop size. Trim tag.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="80" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><path d="M80 35 C92 18 118 18 118 35 C118 52 92 52 80 35" fill="none" stroke="#7dd3fc" stroke-width="2"/><line x1="118" y1="35" x2="175" y2="35" stroke="#7dd3fc" stroke-width="2.5"/><ellipse cx="196" cy="35" rx="13" ry="9" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M175 35 C185 16 205 14 216 26 C226 14 244 18 246 32 C248 46 236 56 224 50 C218 60 200 62 192 52 C182 58 172 50 175 35" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linejoin="round"/><text x="30" y="62" fill="#475569" font-family="monospace" font-size="8">loop stays open</text><text x="222" y="62" fill="#475569" font-family="monospace" font-size="8">eye</text></svg>'
+    tip: 'Small loop for nymphs, 1/4" loop for streamers.',
+    steps: ['Tie a loose overhand knot 4" from tag end.','Thread tag end through the hook eye.','Pass back through the overhand loop.','Wrap 4-6 times around standing line.','Back through overhand loop. Moisten, set loop size. Trim.'],
+    type: 'loop'
   },
   {
     name: 'Perfection Loop',
-    use: 'Leader butt loop-to-loop connection',
+    use: 'Loop-to-loop leader connection',
     strength: '85%',
-    tip: 'Keep the loop small and tight — a sloppy loop twists the leader.',
-    steps: [
-      'Make Loop A, hold the crossing point.',
-      'Make Loop B in front of Loop A.',
-      'Pass the tag end between the two loops.',
-      'Reach through Loop A and pull Loop B through it.',
-      'Pull Loop B and standing line in opposite directions to tighten.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="70" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><path d="M70 35 C82 14 116 14 120 35 C124 56 108 62 98 52 C88 62 72 54 80 42" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/><ellipse cx="104" cy="22" rx="16" ry="10" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="3,2"/><line x1="120" y1="35" x2="310" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><text x="88" y="12" fill="#22c55e" font-family="monospace" font-size="8">loop</text><text x="200" y="62" fill="#475569" font-family="monospace" font-size="8">standing line</text></svg>'
+    tip: 'Keep loop small and tight — a sloppy loop twists your leader.',
+    steps: ['Make Loop A, hold crossing point.','Make Loop B in front of Loop A.','Pass tag end between the two loops.','Pull Loop B through Loop A.','Tighten by pulling loop and standing line apart.'],
+    type: 'perfection'
   },
   {
     name: 'Blood Knot',
     use: 'Joining two lines of similar diameter',
     strength: '90%',
-    tip: 'Works best when lines are within one X size of each other.',
-    steps: [
-      'Overlap the two lines by 6". Hold the crossing point.',
-      'Wrap one tag end 5 times around the other line.',
-      'Bring that tag end through the center crossing.',
-      'Repeat on the other side — 5 wraps opposite direction.',
-      'Pass that tag end through center in the opposite direction.',
-      'Moisten, pull both standing lines. Trim both tags.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="110" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><line x1="210" y1="35" x2="310" y2="35" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="124" cy="35" rx="5" ry="15" fill="none" stroke="#7dd3fc" stroke-width="1.8"/><ellipse cx="138" cy="35" rx="5" ry="15" fill="none" stroke="#7dd3fc" stroke-width="1.8"/><ellipse cx="152" cy="35" rx="5" ry="15" fill="none" stroke="#7dd3fc" stroke-width="1.8"/><ellipse cx="168" cy="35" rx="5" ry="15" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="182" cy="35" rx="5" ry="15" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="196" cy="35" rx="5" ry="15" fill="none" stroke="#f59e0b" stroke-width="1.8"/><line x1="160" y1="20" x2="160" y2="50" stroke="#22c55e" stroke-width="2"/><text x="10" y="64" fill="#475569" font-family="monospace" font-size="8">heavier line</text><text x="248" y="64" fill="#475569" font-family="monospace" font-size="8">tippet</text></svg>'
+    tip: 'Works best within one X size. Wet thoroughly before cinching.',
+    steps: ['Overlap lines 6". Hold crossing point.','Wrap one tag 5x around the other line.','Bring tag back through center crossing.','Repeat other side — 5 wraps opposite direction.','Pass tag through center opposite direction. Pull both standing lines.'],
+    type: 'blood'
   },
   {
     name: 'Nail Knot',
     use: 'Fly line to leader butt',
     strength: '95%',
-    tip: 'Use a small drinking straw instead of a nail — much easier.',
-    steps: [
-      'Hold a small tube alongside the fly line tip.',
-      'Lay leader butt alongside, leaving 8" of tag end.',
-      'Wrap tag end tightly around all three 6-8 times.',
-      'Thread tag end through the tube, then remove tube.',
-      'Moisten and pull both ends to tighten. Trim close.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="260" height="10" rx="5" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/><line x1="270" y1="35" x2="310" y2="35" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/><ellipse cx="110" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="124" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="138" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="152" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><ellipse cx="166" cy="35" rx="4" ry="12" fill="none" stroke="#f59e0b" stroke-width="1.8"/><text x="10" y="62" fill="#475569" font-family="monospace" font-size="8">fly line (thick)</text><text x="270" y="62" fill="#475569" font-family="monospace" font-size="8">leader</text></svg>'
+    tip: 'A small drinking straw works better than a nail.',
+    steps: ['Hold tube alongside fly line tip.','Lay leader alongside, leaving 8" of tag.','Wrap tag around all three 6-8 times.','Thread tag through tube, remove tube.','Moisten, pull both ends tight. Trim close.'],
+    type: 'nail'
   },
   {
     name: 'Davy Knot',
-    use: 'Fast fly attachment',
+    use: 'Fastest fly attachment — minimal profile',
     strength: '85%',
     tip: 'Fastest knot to tie streamside. Great for quick fly changes.',
-    steps: [
-      'Thread tippet through hook eye, leaving 5" of tag.',
-      'Form a loop with the tag end over the standing line.',
-      'Pass the tag end through the loop once.',
-      'Bring tag end over standing line and back through the loop.',
-      'Moisten. Pull standing line firmly. Trim tag very close.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="35" x2="150" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="172" cy="35" rx="14" ry="9" fill="none" stroke="#7dd3fc" stroke-width="2"/><path d="M172 26 C190 12 214 20 212 34 C210 48 192 54 180 46" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><path d="M180 46 C172 52 164 46 166 38 C168 30 176 28 182 34" fill="none" stroke="#f59e0b" stroke-width="2"/><line x1="212" y1="34" x2="310" y2="35" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><text x="10" y="62" fill="#475569" font-family="monospace" font-size="8">standing line</text><text x="248" y="62" fill="#475569" font-family="monospace" font-size="8">cinch tight</text></svg>'
+    steps: ['Thread tippet through eye, leave 5".','Form a loop with tag over standing line.','Pass tag through loop once.','Bring tag over standing line and back through loop.','Pull standing line. Trim tag very close.'],
+    type: 'davy'
   },
   {
     name: 'Arbor Knot',
     use: 'Backing to reel arbor',
     strength: '70%',
-    tip: 'Only needs to hold backing tension, not fight fish directly.',
-    steps: [
-      'Pass backing around the reel arbor.',
-      'Tie an overhand knot in the tag end around the standing line.',
-      'Tie a second overhand knot in the tag end alone (stopper).',
-      'Pull standing line to slide first knot to the arbor.',
-      'Stopper knot prevents pull-through. Trim close.'
-    ],
-    svg: '<svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="18" width="56" height="34" rx="8" fill="#1c2430" stroke="#2d3748" stroke-width="2"/><rect x="20" y="26" width="36" height="18" rx="4" fill="#161b22" stroke="#3b82f6" stroke-width="1.5"/><line x1="66" y1="35" x2="120" y2="35" stroke="#7dd3fc" stroke-width="2.5"/><path d="M120 35 C132 18 158 18 158 35 C158 52 132 52 120 35" fill="none" stroke="#7dd3fc" stroke-width="2"/><line x1="158" y1="35" x2="196" y2="35" stroke="#7dd3fc" stroke-width="2.5"/><path d="M196 35 C206 24 218 24 218 35 C218 46 206 46 196 35" fill="none" stroke="#f59e0b" stroke-width="2"/><line x1="218" y1="35" x2="310" y2="35" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><text x="14" y="64" fill="#475569" font-family="monospace" font-size="8">reel</text><text x="250" y="64" fill="#475569" font-family="monospace" font-size="8">backing line</text></svg>'
+    tip: 'Only holds backing tension — not direct fish pressure.',
+    steps: ['Pass backing around the reel arbor.','Tie overhand knot in tag around standing line.','Tie second overhand knot in tag alone (stopper).','Pull standing line to slide knot to arbor.','Stopper prevents pull-through. Trim close.'],
+    type: 'arbor'
   }
 ];
 
+let activeKnotCanvas = null;
+
 function toggleKnot(i) {
-  document.getElementById('kc-' + i).classList.toggle('open');
+  const card = document.getElementById('kc-' + i);
+  const wasOpen = card.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.knot-card').forEach(c => c.classList.remove('open'));
+  if (activeKnotCanvas) { activeKnotCanvas.dispose(); activeKnotCanvas = null; }
+  if (!wasOpen) {
+    card.classList.add('open');
+    setTimeout(() => initKnot3D(i), 50);
+  }
 }
 
 function renderKnots() {
   const grid = document.getElementById('knot-grid');
   if (grid.children.length > 0) return;
-  grid.innerHTML = KNOTS.map((k, i) => `
+  grid.innerHTML = KNOT_DATA.map((k, i) => `
     <div class="knot-card" id="kc-${i}" onclick="toggleKnot(${i})">
       <div class="knot-header">
         <div>
@@ -2877,11 +2837,402 @@ function renderKnots() {
         </div>
       </div>
       <div class="knot-body">
-        <div class="knot-diagram">${k.svg}</div>
+        <div class="knot-diagram" id="knot-canvas-wrap-${i}">
+          <canvas id="knot-canvas-${i}" style="width:100%;height:180px;border-radius:3px"></canvas>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin:-8px 0 12px">
+          <button class="knot-animate-btn" onclick="event.stopPropagation();replayKnot(${i})">&#9654; Replay</button>
+        </div>
         ${k.steps.map((s, si) => `<div class="knot-step-row"><div class="knot-step-n">${si+1}</div><div>${s}</div></div>`).join('')}
         <div class="knot-pro-tip">&#128161; ${k.tip}</div>
       </div>
     </div>`).join('');
+}
+
+function replayKnot(i) {
+  if (activeKnotCanvas) { activeKnotCanvas.replay(); }
+}
+
+function initKnot3D(i) {
+  const canvas = document.getElementById('knot-canvas-' + i);
+  if (!canvas) return;
+  const type = KNOT_DATA[i].type;
+  const renderer = new KnotRenderer(canvas, type);
+  renderer.start();
+  activeKnotCanvas = renderer;
+}
+
+// ─── 3D KNOT RENDERER ─────────────────────────────────────
+class KnotRenderer {
+  constructor(canvas, type) {
+    this.canvas = canvas;
+    this.type = type;
+    this.animFrame = null;
+    this.t = 0;
+    this.speed = 0.012;
+    this.running = true;
+    // Size canvas
+    const wrap = canvas.parentElement;
+    this.W = wrap.clientWidth || 500;
+    this.H = 180;
+    canvas.width = this.W;
+    canvas.height = this.H;
+    this.ctx = canvas.getContext('2d');
+    this.buildPath();
+  }
+
+  buildPath() {
+    const type = this.type;
+    const cx = this.W / 2;
+    const cy = this.H / 2;
+    // Each knot type returns an array of {x,y,z,r} control points
+    // r = rope "depth" for 3D shading (0=front, 1=back)
+    if (type === 'clinch') this.path = buildClinch(cx, cy);
+    else if (type === 'surgeons') this.path = buildSurgeons(cx, cy);
+    else if (type === 'loop') this.path = buildLoop(cx, cy);
+    else if (type === 'perfection') this.path = buildPerfection(cx, cy);
+    else if (type === 'blood') this.path = buildBlood(cx, cy);
+    else if (type === 'nail') this.path = buildNail(cx, cy);
+    else if (type === 'davy') this.path = buildDavy(cx, cy);
+    else if (type === 'arbor') this.path = buildArbor(cx, cy);
+    else this.path = buildClinch(cx, cy);
+    this.totalLen = this.path.length;
+  }
+
+  start() { this.loop(); }
+
+  replay() {
+    this.t = 0;
+    this.running = true;
+  }
+
+  dispose() {
+    this.running = false;
+    if (this.animFrame) cancelAnimationFrame(this.animFrame);
+  }
+
+  loop() {
+    if (!this.running) return;
+    this.draw();
+    this.t = Math.min(this.t + this.speed, 1);
+    this.animFrame = requestAnimationFrame(() => this.loop());
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    const W = this.W, H = this.H;
+    ctx.clearRect(0, 0, W, H);
+
+    // Dark background
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle grid lines
+    ctx.strokeStyle = 'rgba(59,130,246,0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+    const pts = this.path;
+    const visible = Math.max(2, Math.floor(pts.length * this.t));
+
+    // Draw shadow pass first (for depth)
+    for (let i = 1; i < visible; i++) {
+      const p0 = pts[i-1], p1 = pts[i];
+      const depth = (p0.z + p1.z) / 2; // -1 to 1, -1=back 1=front
+      if (depth < 0) { // only draw back segments in shadow pass
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.strokeStyle = `rgba(20,30,50,0.9)`;
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        this.drawRopeSegment(ctx, p0, p1, depth, true);
+      }
+    }
+
+    // Draw front segments on top
+    for (let i = 1; i < visible; i++) {
+      const p0 = pts[i-1], p1 = pts[i];
+      const depth = (p0.z + p1.z) / 2;
+      if (depth >= 0) {
+        this.drawRopeSegment(ctx, p0, p1, depth, false);
+      }
+    }
+
+    // Draw animated tip (glowing end point)
+    if (this.t < 1 && visible >= 2) {
+      const tip = pts[visible - 1];
+      const grd = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 8);
+      grd.addColorStop(0, 'rgba(125,211,252,0.9)');
+      grd.addColorStop(1, 'rgba(125,211,252,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Label
+    ctx.fillStyle = 'rgba(100,116,139,0.7)';
+    ctx.font = '10px IBM Plex Mono, monospace';
+    ctx.fillText(this.t >= 1 ? 'Click Replay to retie' : 'Tying\u2026', 10, H - 8);
+  }
+
+  drawRopeSegment(ctx, p0, p1, depth, isShadow) {
+    // depth: -1=far back, 0=middle, 1=front
+    const normDepth = (depth + 1) / 2; // 0 to 1
+
+    // Color: fluorescent mono line — pale yellow-green with specular
+    // Back segments are darker/cooler, front are brighter/warmer
+    const baseR = isShadow ? 60 : Math.round(80 + normDepth * 120);
+    const baseG = isShadow ? 80 : Math.round(140 + normDepth * 60);
+    const baseB = isShadow ? 90 : Math.round(100 + normDepth * 80);
+    const alpha = isShadow ? 0.5 : 0.85 + normDepth * 0.15;
+
+    // Width varies with depth (perspective)
+    const width = isShadow ? 5 : 5 + normDepth * 3;
+
+    // Main rope body
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.strokeStyle = `rgba(${baseR},${baseG},${baseB},${alpha})`;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    if (!isShadow) {
+      // Highlight — specular sheen on top of rope
+      const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+      const nx = -Math.sin(angle) * (width * 0.3);
+      const ny =  Math.cos(angle) * (width * 0.3);
+      ctx.beginPath();
+      ctx.moveTo(p0.x + nx, p0.y + ny);
+      ctx.lineTo(p1.x + nx, p1.y + ny);
+      ctx.strokeStyle = `rgba(220,245,255,${0.15 + normDepth * 0.25})`;
+      ctx.lineWidth = width * 0.35;
+      ctx.stroke();
+
+      // Core shadow — underside of rope
+      ctx.beginPath();
+      ctx.moveTo(p0.x - nx, p0.y - ny);
+      ctx.lineTo(p1.x - nx, p1.y - ny);
+      ctx.strokeStyle = `rgba(20,40,60,${0.3 + normDepth * 0.2})`;
+      ctx.lineWidth = width * 0.25;
+      ctx.stroke();
+    }
+  }
+}
+
+// ─── KNOT PATH BUILDERS ───────────────────────────────────
+// Each returns array of {x, y, z} points
+// z ranges -1 (behind) to 1 (in front) for depth ordering
+
+function sampleBezier(p0, p1, p2, p3, steps) {
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const mt = 1 - t;
+    const x = mt*mt*mt*p0[0] + 3*mt*mt*t*p1[0] + 3*mt*t*t*p2[0] + t*t*t*p3[0];
+    const y = mt*mt*mt*p0[1] + 3*mt*mt*t*p1[1] + 3*mt*t*t*p2[1] + t*t*t*p3[1];
+    const z = mt*mt*mt*p0[2] + 3*mt*mt*t*p1[2] + 3*mt*t*t*p2[2] + t*t*t*p3[2];
+    pts.push({x, y, z});
+  }
+  return pts;
+}
+
+function buildClinch(cx, cy) {
+  const pts = [];
+  // Straight left section
+  for (let i = 0; i <= 20; i++) pts.push({x: 30 + i*4, y: cy, z: 0});
+  // 5 wraps around the standing line
+  for (let w = 0; w < 5; w++) {
+    for (let i = 0; i <= 20; i++) {
+      const a = (i / 20) * Math.PI * 2;
+      const rx = 14 - w * 1.5;
+      const ry = 18 - w;
+      pts.push({
+        x: cx - 60 + w * 14 + Math.cos(a) * 6,
+        y: cy + Math.sin(a) * ry,
+        z: Math.sin(a)
+      });
+    }
+  }
+  // Thread back through loops
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;
+    pts.push({x: cx - 10 + t * 30, y: cy - 30 + t * 28, z: -0.5 + t});
+  }
+  // Hook eye circle
+  for (let i = 0; i <= 30; i++) {
+    const a = (i / 30) * Math.PI * 2 - Math.PI / 2;
+    pts.push({x: cx + 70 + Math.cos(a) * 16, y: cy + Math.sin(a) * 16, z: Math.sin(a) * 0.5});
+  }
+  return pts;
+}
+
+function buildSurgeons(cx, cy) {
+  const pts = [];
+  // Two parallel lines overlapping
+  for (let i = 0; i <= 15; i++) pts.push({x: 20 + i*4, y: cy - 10, z: 0.3});
+  for (let i = 0; i <= 15; i++) pts.push({x: 20 + i*4, y: cy + 10, z: -0.3});
+  // First overhand loop
+  for (let i = 0; i <= 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    pts.push({x: cx - 30 + Math.cos(a) * 40, y: cy + Math.sin(a) * 30, z: Math.sin(a)});
+  }
+  // Second overhand loop (tighter)
+  for (let i = 0; i <= 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    pts.push({x: cx + 10 + Math.cos(a) * 30, y: cy + Math.sin(a) * 22, z: -Math.sin(a) * 0.8});
+  }
+  // Right tails
+  for (let i = 0; i <= 20; i++) pts.push({x: cx + 60 + i*5, y: cy - 10, z: 0.3});
+  for (let i = 0; i <= 20; i++) pts.push({x: cx + 60 + i*5, y: cy + 10, z: -0.3});
+  return pts;
+}
+
+function buildLoop(cx, cy) {
+  const pts = [];
+  // Standing line
+  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i*4, y: cy, z: 0});
+  // Overhand knot loop
+  for (let i = 0; i <= 30; i++) {
+    const a = (i/30) * Math.PI * 2;
+    pts.push({x: cx - 50 + Math.cos(a) * 22, y: cy + Math.sin(a) * 22, z: Math.sin(a)});
+  }
+  // Line to hook eye
+  for (let i = 0; i <= 20; i++) pts.push({x: cx - 10 + i * 5, y: cy, z: 0.2});
+  // Hook eye
+  for (let i = 0; i <= 30; i++) {
+    const a = (i/30) * Math.PI * 2 - Math.PI/2;
+    pts.push({x: cx + 70 + Math.cos(a) * 14, y: cy + Math.sin(a) * 14, z: Math.sin(a) * 0.5});
+  }
+  // Wraps back
+  for (let w = 0; w < 5; w++) {
+    for (let i = 0; i <= 15; i++) {
+      const a = (i/15) * Math.PI * 2;
+      pts.push({x: cx - 20 + w * 8 + Math.cos(a) * 5, y: cy + Math.sin(a) * 15, z: Math.sin(a) * 0.8});
+    }
+  }
+  return pts;
+}
+
+function buildPerfection(cx, cy) {
+  const pts = [];
+  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 5, y: cy, z: 0});
+  // Loop A - larger
+  for (let i = 0; i <= 50; i++) {
+    const a = (i/50) * Math.PI * 2;
+    pts.push({x: cx - 40 + Math.cos(a) * 35, y: cy + Math.sin(a) * 35, z: Math.sin(a) * 0.9});
+  }
+  // Loop B - smaller, in front
+  for (let i = 0; i <= 40; i++) {
+    const a = (i/40) * Math.PI * 2;
+    pts.push({x: cx + 5 + Math.cos(a) * 22, y: cy + Math.sin(a) * 22, z: -Math.sin(a) * 0.8 + 0.2});
+  }
+  // Tag through
+  for (let i = 0; i <= 20; i++) {
+    const t = i/20;
+    pts.push({x: cx - 5 + t * 15, y: cy - 55 + t * 60, z: -0.5 + t * 0.8});
+  }
+  // Standing line right
+  for (let i = 0; i <= 20; i++) pts.push({x: cx + 30 + i * 5, y: cy, z: 0});
+  return pts;
+}
+
+function buildBlood(cx, cy) {
+  const pts = [];
+  // Left line
+  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 4, y: cy, z: 0});
+  // Left wraps
+  for (let w = 0; w < 5; w++) {
+    for (let i = 0; i <= 20; i++) {
+      const a = (i/20) * Math.PI * 2;
+      pts.push({x: cx - 50 + w * 12 + Math.cos(a) * 5, y: cy + Math.sin(a) * 20, z: Math.sin(a)});
+    }
+  }
+  // Tag through center
+  for (let i = 0; i <= 15; i++) {
+    const t = i / 15;
+    pts.push({x: cx - 10 + t * 20, y: cy, z: -0.8 + t * 1.6});
+  }
+  // Right wraps
+  for (let w = 0; w < 5; w++) {
+    for (let i = 0; i <= 20; i++) {
+      const a = (i/20) * Math.PI * 2;
+      pts.push({x: cx + 10 + w * 12 + Math.cos(a) * 5, y: cy + Math.sin(a) * 20, z: -Math.sin(a)});
+    }
+  }
+  // Right line
+  for (let i = 0; i <= 20; i++) pts.push({x: cx + 80 + i * 4, y: cy, z: 0});
+  return pts;
+}
+
+function buildNail(cx, cy) {
+  const pts = [];
+  // Thick fly line
+  for (let i = 0; i <= 30; i++) pts.push({x: 20 + i * 5, y: cy, z: 0});
+  // Wraps
+  for (let w = 0; w < 7; w++) {
+    for (let i = 0; i <= 16; i++) {
+      const a = (i/16) * Math.PI * 2;
+      pts.push({x: cx - 40 + w * 12 + Math.cos(a) * 4, y: cy + Math.sin(a) * 16, z: Math.sin(a)});
+    }
+  }
+  // Leader exits right
+  for (let i = 0; i <= 30; i++) pts.push({x: cx + 55 + i * 5, y: cy, z: 0.5});
+  return pts;
+}
+
+function buildDavy(cx, cy) {
+  const pts = [];
+  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 4, y: cy, z: 0});
+  // Hook eye
+  for (let i = 0; i <= 30; i++) {
+    const a = (i/30) * Math.PI * 2 - Math.PI/2;
+    pts.push({x: cx + 20 + Math.cos(a) * 16, y: cy + Math.sin(a) * 16, z: Math.sin(a) * 0.5});
+  }
+  // Single loop over
+  for (let i = 0; i <= 25; i++) {
+    const a = (i/25) * Math.PI;
+    pts.push({x: cx + 10 + Math.cos(a) * 30, y: cy - Math.sin(a) * 28, z: Math.sin(a) * 0.9});
+  }
+  // Back through
+  for (let i = 0; i <= 15; i++) {
+    const t = i/15;
+    pts.push({x: cx - 10 + t * 30, y: cy + 5 - t * 10, z: -0.5 + t * 0.8});
+  }
+  // Tag end
+  for (let i = 0; i <= 10; i++) pts.push({x: cx + 40 + i * 4, y: cy + 15, z: 0.2});
+  return pts;
+}
+
+function buildArbor(cx, cy) {
+  const pts = [];
+  // Reel arbor (drawn as background, just show wraps)
+  // Main line coming off reel
+  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 4, y: cy, z: 0});
+  // Wrap around arbor
+  for (let i = 0; i <= 50; i++) {
+    const a = (i/50) * Math.PI * 2 * 1.5;
+    const r = 30 - i * 0.2;
+    pts.push({x: cx - 30 + Math.cos(a) * r, y: cy + Math.sin(a) * r, z: Math.sin(a)});
+  }
+  // Overhand knot 1
+  for (let i = 0; i <= 30; i++) {
+    const a = (i/30) * Math.PI * 2;
+    pts.push({x: cx + 30 + Math.cos(a) * 18, y: cy + Math.sin(a) * 18, z: Math.sin(a) * 0.8});
+  }
+  // Stopper knot
+  for (let i = 0; i <= 20; i++) {
+    const a = (i/20) * Math.PI * 2;
+    pts.push({x: cx + 65 + Math.cos(a) * 10, y: cy + Math.sin(a) * 10, z: Math.sin(a) * 0.6});
+  }
+  // Tag end
+  for (let i = 0; i <= 10; i++) pts.push({x: cx + 85 + i * 4, y: cy, z: 0.2});
+  return pts;
 }
 
 // ═══════════════════════════════════════════════════════════
