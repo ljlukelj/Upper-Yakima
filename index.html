@@ -2625,7 +2625,7 @@ async function onStatePick() {
   allSites = []; results.innerHTML = ''; input.value = '';
   status.textContent = 'Loading gauges for ' + state + '...';
   try {
-    const url = `https://waterservices.usgs.gov/nwis/site/?format=rdb&stateCd=${state}&siteType=ST&hasDataTypeCd=iv&siteStatus=active`;
+    const url = `https://yakima-proxy.ljlukelj.workers.dev/sites?state=${state}`;
     const res = await fetch(url);
     const text = await res.text();
     allSites = text.split('\n')
