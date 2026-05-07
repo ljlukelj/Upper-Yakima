@@ -2738,87 +2738,872 @@ function switchMode(mode) {
 }
 
 // ═════════════════════════════════════════════════════════
-// KNOTS — 3D Three.js rope simulations
+// KNOTS — Step-by-step field reference animations
 // ═════════════════════════════════════════════════════════
-const KNOT_DATA = [
+
+/*
+  Each knot has an array of STEPS.
+  Each step has:
+    label  — short instruction text shown below canvas
+    draw   — function(ctx, W, H, progress 0..1) that renders that step
+  The player shows one step at a time, animates progress 0→1 over ~2s,
+  holds for 1s, then moves to next step. User can also tap prev/next.
+*/
+
+const ROPE = {
+  mono:   { base: [180, 220, 190], hi: [220, 255, 230], shadow: [40, 80, 60] },
+  leader: { base: [200, 180, 100], hi: [240, 220, 140], shadow: [80, 60, 20] },
+  tag:    { base: [252, 130, 80],  hi: [255, 180, 140], shadow: [120, 50, 20] },
+};
+
+function ropeStroke(ctx, color, width, depth) {
+  // depth 0=back 1=front
+  const d = depth ?? 0.5;
+  const [r,g,b] = color.base;
+  const scale = 0.5 + d * 0.5;
+  ctx.strokeStyle = `rgba(${Math.round(r*scale)},${Math.round(g*scale)},${Math.round(b*scale)},0.95)`;
+  ctx.lineWidth = width * (0.8 + d * 0.4);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+
+function drawRope(ctx, pts, color, width, closed) {
+  if (pts.length < 2) return;
+  // Sort by z for proper depth — draw back first, front on top
+  // For simplicity: single pass with per-segment depth shading
+  ctx.save();
+  for (let i = 1; i < pts.length; i++) {
+    const p0 = pts[i-1], p1 = pts[i];
+    const z = ((p0.z ?? 0) + (p1.z ?? 0)) / 2;
+    const depth = (z + 1) / 2; // -1..1 → 0..1
+    const [r,g,b] = color.base;
+    const [hr,hg,hb] = color.hi;
+    const [sr,sg,sb] = color.shadow;
+    const scale = 0.4 + depth * 0.6;
+    const w = width * (0.7 + depth * 0.5);
+
+    // Shadow
+    ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y);
+    ctx.strokeStyle = `rgba(0,0,0,0.4)`; ctx.lineWidth = w + 3; ctx.lineCap='round'; ctx.stroke();
+
+    // Body
+    ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y);
+    ctx.strokeStyle = `rgb(${Math.round(r*scale)},${Math.round(g*scale)},${Math.round(b*scale)})`;
+    ctx.lineWidth = w; ctx.stroke();
+
+    // Highlight
+    const ang = Math.atan2(p1.y-p0.y, p1.x-p0.x);
+    const nx = -Math.sin(ang) * w * 0.3, ny = Math.cos(ang) * w * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(p0.x+nx, p0.y+ny); ctx.lineTo(p1.x+nx, p1.y+ny);
+    ctx.strokeStyle = `rgba(${hr},${hg},${hb},${0.1 + depth*0.3})`;
+    ctx.lineWidth = w * 0.3; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawHook(ctx, x, y, size) {
+  ctx.save();
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2.5; ctx.lineCap='round';
+  // Shank
+  ctx.beginPath(); ctx.moveTo(x, y-size*0.8); ctx.lineTo(x, y+size*0.5); ctx.stroke();
+  // Bend
+  ctx.beginPath();
+  ctx.arc(x-size*0.3, y+size*0.5, size*0.3, 0, Math.PI*0.75);
+  ctx.stroke();
+  // Point
+  ctx.beginPath(); ctx.moveTo(x-size*0.55, y+size*0.65); ctx.lineTo(x-size*0.3, y+size*0.2); ctx.stroke();
+  // Eye
+  ctx.beginPath(); ctx.arc(x, y-size*0.8, size*0.12, 0, Math.PI*2);
+  ctx.strokeStyle='#7dd3fc'; ctx.lineWidth=2; ctx.stroke();
+  ctx.restore();
+}
+
+function label(ctx, text, x, y, color) {
+  ctx.save();
+  ctx.font = '11px "IBM Plex Mono", monospace';
+  ctx.fillStyle = color || 'rgba(125,211,252,0.85)';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function arrow(ctx, x1,y1,x2,y2,color) {
+  ctx.save();
+  ctx.strokeStyle = color||'rgba(125,211,252,0.7)';
+  ctx.fillStyle   = color||'rgba(125,211,252,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  const ang = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-8*Math.cos(ang-0.4), y2-8*Math.sin(ang-0.4));
+  ctx.lineTo(x2-8*Math.cos(ang+0.4), y2-8*Math.sin(ang+0.4));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// Build point arrays along bezier curves with z depth
+function bezierPts(p0,p1,p2,p3, n, z0, z1) {
+  const pts = [];
+  for (let i=0;i<=n;i++) {
+    const t=i/n, m=1-t;
+    pts.push({
+      x: m*m*m*p0[0]+3*m*m*t*p1[0]+3*m*t*t*p2[0]+t*t*t*p3[0],
+      y: m*m*m*p0[1]+3*m*m*t*p1[1]+3*m*t*t*p2[1]+t*t*t*p3[1],
+      z: (z0??0)+(((z1??0)-(z0??0))*t)
+    });
+  }
+  return pts;
+}
+
+function circlePts(cx,cy,rx,ry, n, zFn) {
+  return Array.from({length:n+1},(_,i)=>{
+    const a=(i/n)*Math.PI*2;
+    return {x:cx+Math.cos(a)*rx, y:cy+Math.sin(a)*ry, z:(zFn?zFn(a):Math.sin(a))};
+  });
+}
+
+// Lerp a path to only show first `frac` of it
+function pathFrac(pts, frac) {
+  const n = Math.max(1, Math.floor(pts.length * frac));
+  return pts.slice(0, n);
+}
+
+// ── CLINCH KNOT ──────────────────────────────────────────
+const CLINCH_STEPS = [
   {
-    name: 'Improved Clinch Knot',
-    use: 'Fly to tippet — most common knot in fly fishing',
-    strength: '95%',
-    tip: 'Wet before tightening. 5 wraps for mono under 8lb, 6 for heavier.',
-    steps: ['Thread 6" through the hook eye.','Make 5-6 wraps around the standing line.','Pass tag end through the loop above the eye.','Pass tag end through the large loop just made.','Moisten, pull standing line slowly. Trim tag end.'],
-    type: 'clinch'
+    label: 'Step 1: Thread 6" of tippet through the hook eye',
+    draw(ctx,W,H,p) {
+      const hx=W*0.65, hy=H*0.45;
+      drawHook(ctx, hx, hy, 28);
+      // Standing line (static)
+      const standPts = bezierPts([20,hy],[W*0.3,hy],[hx-50,hy],[hx-2,hy-22], 40, 0,0);
+      drawRope(ctx, standPts, ROPE.mono, 5);
+      // Tag end animates through eye
+      const tagEnd = W*0.65 + p*(W*0.18);
+      const tagPts = bezierPts([hx-2,hy-22],[hx+10,hy-30],[hx+30,hy-20],[tagEnd, hy-5+p*10], 30, 0.5,0.8);
+      drawRope(ctx, pathFrac(tagPts,p), ROPE.tag, 4);
+      label(ctx,'tag end →', tagEnd-20, hy+30, 'rgba(252,130,80,0.9)');
+      label(ctx,'hook eye', hx-10, hy-55, 'rgba(125,211,252,0.7)');
+      arrow(ctx, hx+5, hy-48, hx+2, hy-35);
+    }
   },
   {
-    name: "Surgeon's Knot",
-    use: 'Joining tippet to leader — fast and bombproof',
-    strength: '90%',
-    tip: 'Pull all four ends simultaneously for an even seat.',
-    steps: ['Overlap 6" of tippet alongside leader.','Form a loop with both lines together.','Pass both tag ends through the loop twice.','Moisten. Pull all four ends firmly and evenly.','Trim both tags close.'],
-    type: 'surgeons'
+    label: 'Step 2: Double back and make 5 wraps around the standing line',
+    draw(ctx,W,H,p) {
+      const hx=W*0.72, hy=H*0.45;
+      drawHook(ctx, hx, hy, 24);
+      // Standing line
+      drawRope(ctx, bezierPts([20,hy],[W*0.3,hy],[hx-60,hy],[hx,hy-22],40,0,0), ROPE.mono, 5);
+      // Tag comes out and doubles back
+      drawRope(ctx, bezierPts([hx,hy-22],[hx+18,hy-30],[hx+30,hy-15],[hx+25,hy+5],20,0.8,0.3), ROPE.tag, 4);
+      // Wraps — animate how many appear
+      const wrapCount = Math.floor(p * 5);
+      const fracWrap  = (p * 5) % 1;
+      for (let w=0; w<5; w++) {
+        const wx = hx - 30 - w*15;
+        const pts = circlePts(wx, hy, 6, 16, w < wrapCount ? 24 : (w===wrapCount ? Math.round(fracWrap*24) : 0), a => Math.sin(a));
+        if (pts.length > 1) drawRope(ctx, pts, ROPE.tag, 4);
+        if (w < wrapCount || w===wrapCount) label(ctx, `${w+1}`, wx-4, hy+28, 'rgba(252,180,100,0.8)');
+      }
+      label(ctx,'5 wraps', hx-100, H*0.82, 'rgba(252,130,80,0.9)');
+      arrow(ctx, hx-90, H*0.79, hx-70, hy+22);
+    }
   },
   {
-    name: 'Non-Slip Loop Knot',
-    use: 'Fly to tippet — lets fly swing freely in current',
-    strength: '95%',
-    tip: 'Small loop for nymphs, 1/4" loop for streamers.',
-    steps: ['Tie a loose overhand knot 4" from tag end.','Thread tag end through the hook eye.','Pass back through the overhand loop.','Wrap 4-6 times around standing line.','Back through overhand loop. Moisten, set loop size. Trim.'],
-    type: 'loop'
+    label: 'Step 3: Pass tag end through the small loop above the eye',
+    draw(ctx,W,H,p) {
+      const hx=W*0.72, hy=H*0.45;
+      drawHook(ctx, hx, hy, 24);
+      drawRope(ctx, bezierPts([20,hy],[W*0.3,hy],[hx-60,hy],[hx,hy-22],40,0,0), ROPE.mono, 5);
+      // All wraps (static)
+      for (let w=0;w<5;w++) {
+        const wx=hx-30-w*15;
+        drawRope(ctx, circlePts(wx,hy,6,16,24,a=>Math.sin(a)), ROPE.tag, 4);
+      }
+      // Small loop at eye
+      const loopPts = circlePts(hx+2, hy-28, 12, 10, 20, a=>Math.sin(a)*0.3);
+      drawRope(ctx, loopPts, ROPE.mono, 3);
+      // Tag threading through loop
+      const tagX = hx-5 + p*22;
+      const tagY = hy-20 - p*18;
+      drawRope(ctx, bezierPts([hx+25,hy+5],[hx+20,hy-5],[hx+10,hy-14],[tagX,tagY],20,0.3,0.9), ROPE.tag, 4);
+      label(ctx,'small loop', hx+18, hy-44);
+      label(ctx,'tag goes UP through here', hx-60, H*0.85, 'rgba(252,130,80,0.9)');
+      arrow(ctx, hx-10, H*0.82, hx+4, hy-16);
+      ctx.save();
+      ctx.strokeStyle='rgba(125,211,252,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+      ctx.strokeRect(hx-14, hy-42, 32, 30); ctx.restore();
+    }
   },
   {
-    name: 'Perfection Loop',
-    use: 'Loop-to-loop leader connection',
-    strength: '85%',
-    tip: 'Keep loop small and tight — a sloppy loop twists your leader.',
-    steps: ['Make Loop A, hold crossing point.','Make Loop B in front of Loop A.','Pass tag end between the two loops.','Pull Loop B through Loop A.','Tighten by pulling loop and standing line apart.'],
-    type: 'perfection'
+    label: 'Step 4: Now pass tag through the large loop you just made',
+    draw(ctx,W,H,p) {
+      const hx=W*0.72, hy=H*0.45;
+      drawHook(ctx, hx, hy, 24);
+      drawRope(ctx, bezierPts([20,hy],[W*0.3,hy],[hx-60,hy],[hx,hy-22],40,0,0), ROPE.mono, 5);
+      for (let w=0;w<5;w++) {
+        drawRope(ctx, circlePts(hx-30-w*15,hy,6,16,24,a=>Math.sin(a)), ROPE.tag, 4);
+      }
+      // Large loop formed by tag going up through small loop
+      const bigLoop = bezierPts([hx+25,hy+5],[hx+60,hy+40],[hx+80,hy-20],[hx-5,hy-28],30,0.3,0.8);
+      drawRope(ctx, bigLoop, ROPE.tag, 3);
+      // Tag now threading through big loop
+      const tagX = hx+10+p*30, tagY = hy+30-p*50;
+      drawRope(ctx, bezierPts([hx+25,hy+5],[hx+30,hy+20],[hx+25+p*10,hy+10],[tagX,tagY],20,0.1,0.9), ROPE.tag, 4);
+      label(ctx,'large loop', hx+55, hy+45, 'rgba(252,130,80,0.7)');
+      label(ctx,'tag goes through here too', W*0.05, H*0.85, 'rgba(252,130,80,0.9)');
+      arrow(ctx, W*0.28, H*0.82, hx+35, hy+35);
+    }
   },
   {
-    name: 'Blood Knot',
-    use: 'Joining two lines of similar diameter',
-    strength: '90%',
-    tip: 'Works best within one X size. Wet thoroughly before cinching.',
-    steps: ['Overlap lines 6". Hold crossing point.','Wrap one tag 5x around the other line.','Bring tag back through center crossing.','Repeat other side — 5 wraps opposite direction.','Pass tag through center opposite direction. Pull both standing lines.'],
-    type: 'blood'
-  },
-  {
-    name: 'Nail Knot',
-    use: 'Fly line to leader butt',
-    strength: '95%',
-    tip: 'A small drinking straw works better than a nail.',
-    steps: ['Hold tube alongside fly line tip.','Lay leader alongside, leaving 8" of tag.','Wrap tag around all three 6-8 times.','Thread tag through tube, remove tube.','Moisten, pull both ends tight. Trim close.'],
-    type: 'nail'
-  },
-  {
-    name: 'Davy Knot',
-    use: 'Fastest fly attachment — minimal profile',
-    strength: '85%',
-    tip: 'Fastest knot to tie streamside. Great for quick fly changes.',
-    steps: ['Thread tippet through eye, leave 5".','Form a loop with tag over standing line.','Pass tag through loop once.','Bring tag over standing line and back through loop.','Pull standing line. Trim tag very close.'],
-    type: 'davy'
-  },
-  {
-    name: 'Arbor Knot',
-    use: 'Backing to reel arbor',
-    strength: '70%',
-    tip: 'Only holds backing tension — not direct fish pressure.',
-    steps: ['Pass backing around the reel arbor.','Tie overhand knot in tag around standing line.','Tie second overhand knot in tag alone (stopper).','Pull standing line to slide knot to arbor.','Stopper prevents pull-through. Trim close.'],
-    type: 'arbor'
+    label: 'Step 5: Moisten and pull slowly — trim tag end',
+    draw(ctx,W,H,p) {
+      const hx=W*0.65, hy=H*0.48;
+      drawHook(ctx, hx, hy, 26);
+      // Cinched knot — compact wraps
+      const kx = hx-25;
+      for (let w=0;w<5;w++) {
+        const tight = p * 0.7;
+        drawRope(ctx, circlePts(kx+w*(12-p*4), hy, 6-tight*2, 14-tight*4, 24, a=>Math.sin(a)), ROPE.tag, 4-p);
+      }
+      // Standing line pulling left
+      const pullX = 20 + p*10;
+      drawRope(ctx, bezierPts([pullX,hy],[W*0.25,hy],[kx-20,hy],[kx,hy],40,0,0), ROPE.mono, 5);
+      // Tag end — short after trim
+      const trimLen = 30 - p*20;
+      drawRope(ctx, bezierPts([hx,hy-22],[hx+10,hy-15],[hx+trimLen,hy-5],[hx+trimLen,hy+5],10,0.5,0.3), ROPE.tag, 3);
+      // Pull arrows
+      if (p > 0.2) {
+        arrow(ctx, kx-30, hy, kx-60, hy, 'rgba(34,197,94,0.8)');
+        arrow(ctx, hx+10, hy-30, hx+5, hy-50, 'rgba(34,197,94,0.8)');
+      }
+      label(ctx, p < 0.5 ? 'Moisten first!' : 'Pull tight & trim', W*0.05, H*0.88, 'rgba(34,197,94,0.9)');
+      if (p > 0.7) {
+        ctx.save();
+        ctx.font='bold 13px "IBM Plex Mono",monospace';
+        ctx.fillStyle='rgba(34,197,94,0.9)';
+        ctx.fillText('✓ Done!', W*0.05, H*0.72);
+        ctx.restore();
+      }
+    }
   }
 ];
 
-let activeKnotCanvas = null;
+// ── SURGEON'S KNOT ────────────────────────────────────────
+const SURGEONS_STEPS = [
+  {
+    label: 'Step 1: Overlap leader and tippet — hold crossing point',
+    draw(ctx,W,H,p) {
+      const cy=H*0.42;
+      // Leader (yellow/gold) from left
+      drawRope(ctx, bezierPts([20,cy-8],[W*0.35,cy-8],[W*0.55,cy-8],[W*0.85,cy-8],30,0.3,0.3), ROPE.leader, 5);
+      // Tippet (mono) from right, overlapping
+      const startX = W*0.85 - p*(W*0.4);
+      drawRope(ctx, bezierPts([startX,cy+8],[W*0.55,cy+8],[W*0.35,cy+8],[20,cy+8],30,0.3,0.3), ROPE.mono, 5);
+      label(ctx,'leader', W*0.05, cy-20, 'rgba(200,180,100,0.9)');
+      label(ctx,'tippet', W*0.05, cy+25, 'rgba(180,220,190,0.9)');
+      if (p>0.5) {
+        ctx.save();
+        ctx.strokeStyle='rgba(125,211,252,0.6)'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.arc(W*0.5,cy,20,0,Math.PI*2); ctx.stroke();
+        ctx.restore();
+        label(ctx,'hold here', W*0.5-20, cy+35);
+        arrow(ctx, W*0.5+5, cy+32, W*0.5, cy+22);
+      }
+    }
+  },
+  {
+    label: 'Step 2: Form a loop with BOTH lines together',
+    draw(ctx,W,H,p) {
+      const cx=W*0.5, cy=H*0.48;
+      // Both lines form one big loop
+      const loopH = p * 55;
+      const topPts = bezierPts([20,cy],[cx-60,cy-loopH],[cx+60,cy-loopH],[W-20,cy],40,0.3,-0.3);
+      const botPts = bezierPts([W-20,cy],[cx+60,cy+loopH*0.6],[cx-60,cy+loopH*0.6],[20,cy],40,-0.3,0.3);
+      drawRope(ctx, topPts, ROPE.leader, 5);
+      drawRope(ctx, topPts.map(p=>({...p,y:p.y+10})), ROPE.mono, 5);
+      if (p > 0.3) {
+        drawRope(ctx, botPts, ROPE.leader, 5);
+        drawRope(ctx, botPts.map(p=>({...p,y:p.y+10})), ROPE.mono, 5);
+      }
+      label(ctx,'one big loop with both lines', cx-80, H*0.85);
+    }
+  },
+  {
+    label: 'Step 3: Pass both tag ends through the loop — do it TWICE',
+    draw(ctx,W,H,p) {
+      const cx=W*0.5, cy=H*0.45;
+      // Loop (static)
+      drawRope(ctx, bezierPts([20,cy],[cx-50,cy-50],[cx+50,cy-50],[W-20,cy],40,0.3,-0.3), ROPE.leader, 5);
+      drawRope(ctx, bezierPts([20,cy+8],[cx-50,cy-42],[cx+50,cy-42],[W-20,cy+8],40,0.3,-0.3), ROPE.mono, 5);
+      drawRope(ctx, bezierPts([W-20,cy],[cx+50,cy+40],[cx-50,cy+40],[20,cy],40,-0.3,0.3), ROPE.leader, 5);
+      drawRope(ctx, bezierPts([W-20,cy+8],[cx+50,cy+48],[cx-50,cy+48],[20,cy+8],40,-0.3,0.3), ROPE.mono, 5);
+      // Passes through loop animation
+      const pass = Math.min(p*2, 1);
+      const pass2 = Math.max(0, p*2-1);
+      // First pass
+      if (pass > 0) {
+        const tx = cx + Math.sin(pass*Math.PI)*30;
+        const ty = cy + 55 - pass*80;
+        drawRope(ctx, bezierPts([cx-10,cy+55],[cx-5,cy+20],[cx+5,cy-10],[cx+10,ty],20,1,0.2), ROPE.tag, 3.5);
+        label(ctx, '1st pass', cx+15, ty-10, 'rgba(252,130,80,0.9)');
+      }
+      // Second pass
+      if (pass2 > 0) {
+        const ty2 = cy+55 - pass2*80;
+        drawRope(ctx, bezierPts([cx+10,cy+55],[cx+15,cy+20],[cx+5,cy-5],[cx+15,ty2],20,1,0.2), ROPE.tag, 3.5);
+        label(ctx, '2nd pass!', cx+25, ty2-10, 'rgba(252,130,80,0.9)');
+      }
+      label(ctx,'through twice = stronger knot', W*0.05, H*0.9, 'rgba(34,197,94,0.8)');
+    }
+  },
+  {
+    label: 'Step 4: Moisten and pull all FOUR ends simultaneously',
+    draw(ctx,W,H,p) {
+      const cx=W*0.5, cy=H*0.5;
+      const tight = p*0.8;
+      // Knot body tightening
+      const ksize = 35 - tight*20;
+      drawRope(ctx, circlePts(cx,cy,ksize,ksize*0.6,40,a=>Math.sin(a)*0.8), ROPE.leader, 4);
+      drawRope(ctx, circlePts(cx,cy,ksize*0.7,ksize*0.5,40,a=>-Math.sin(a)*0.8), ROPE.mono, 4);
+      // Four tails pulling out
+      const pull = p*35;
+      const tails = [
+        {dx:-1,dy:0,color:ROPE.leader,lbl:'leader →'},
+        {dx:1,dy:0,color:ROPE.leader,lbl:'← leader'},
+        {dx:-1,dy:0.5,color:ROPE.mono,lbl:'tippet →'},
+        {dx:1,dy:0.5,color:ROPE.mono,lbl:'← tippet'},
+      ];
+      [[cx-ksize-pull,cy-8,'rgba(200,180,100,0.8)','← pull'],
+       [cx+ksize+pull,cy-8,'rgba(200,180,100,0.8)','pull →'],
+       [cx-ksize-pull,cy+8,'rgba(180,220,190,0.8)','← pull'],
+       [cx+ksize+pull,cy+8,'rgba(180,220,190,0.8)','pull →']].forEach(([ex,ey,col,lbl],i)=>{
+        const sx = cx + (i%2===0?-ksize:ksize) * 0.8;
+        drawRope(ctx, bezierPts([sx,ey],[sx+(ex-sx)*0.4,ey],[sx+(ex-sx)*0.7,ey],[ex,ey],15,0,0), i<2?ROPE.leader:ROPE.mono, 4);
+        if (p>0.3) arrow(ctx, sx+(ex-sx)*0.6, ey, ex, ey, col);
+      });
+      label(ctx, p>0.6?'Pull evenly — all 4 at once!':'Moisten first!', cx-60, H*0.88, 'rgba(34,197,94,0.9)');
+    }
+  },
+  {
+    label: 'Step 5: Trim both tag ends close to the knot',
+    draw(ctx,W,H,p) {
+      const cx=W*0.5, cy=H*0.5;
+      // Finished knot
+      drawRope(ctx, circlePts(cx,cy,18,12,40,a=>Math.sin(a)*0.8), ROPE.leader, 4);
+      drawRope(ctx, circlePts(cx,cy,13,9,40,a=>-Math.sin(a)*0.8), ROPE.mono, 4);
+      // Tails — get shorter as p increases
+      const tailLen = 60 - p*45;
+      drawRope(ctx, bezierPts([cx-18,cy-4],[cx-40,cy-4],[cx-tailLen,cy-4],[cx-tailLen-5,cy-6],10,0,0), ROPE.leader, 4);
+      drawRope(ctx, bezierPts([cx+18,cy-4],[cx+40,cy-4],[cx+tailLen,cy-4],[cx+tailLen+5,cy-6],10,0,0), ROPE.leader, 4);
+      drawRope(ctx, bezierPts([cx-18,cy+4],[cx-40,cy+4],[cx-tailLen,cy+4],[cx-tailLen-5,cy+6],10,0,0), ROPE.mono, 4);
+      drawRope(ctx, bezierPts([cx+18,cy+4],[cx+40,cy+4],[cx+tailLen,cy+4],[cx+tailLen+5,cy+6],10,0,0), ROPE.mono, 4);
+      if (p>0.6) {
+        ctx.save();
+        ctx.font='bold 13px "IBM Plex Mono",monospace';
+        ctx.fillStyle='rgba(34,197,94,0.9)';
+        ctx.fillText("✓ Surgeon's Knot complete!", cx-90, H*0.85);
+        ctx.restore();
+      } else {
+        label(ctx,'Trim tags to 1/8"', cx-50, H*0.85, 'rgba(245,158,11,0.9)');
+      }
+    }
+  }
+];
+
+// ── BLOOD KNOT ────────────────────────────────────────────
+const BLOOD_STEPS = [
+  {
+    label: 'Step 1: Overlap the two lines 6" — hold the center X',
+    draw(ctx,W,H,p) {
+      const cy=H*0.5, cx=W*0.5;
+      const overlap = p*W*0.35;
+      drawRope(ctx, bezierPts([20,cy-8],[cx-60,cy-8],[cx-10,cy-8],[cx+overlap,cy-8],30,0,0), ROPE.leader, 5);
+      drawRope(ctx, bezierPts([W-20,cy+8],[cx+60,cy+8],[cx+10,cy+8],[cx-overlap,cy+8],30,0,0), ROPE.mono, 5);
+      if (p>0.6) {
+        ctx.save(); ctx.strokeStyle='rgba(125,211,252,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+        ctx.beginPath(); ctx.arc(cx,cy,14,0,Math.PI*2); ctx.stroke(); ctx.restore();
+        label(ctx,'hold here', cx-24, cy+30);
+      }
+    }
+  },
+  {
+    label: 'Step 2: Wrap the left tag end 5x around the right line',
+    draw(ctx,W,H,p) {
+      const cy=H*0.5, cx=W*0.5;
+      drawRope(ctx, bezierPts([20,cy-8],[cx-50,cy-8],[cx,cy-8],[W*0.75,cy-8],30,0,0), ROPE.leader, 5);
+      drawRope(ctx, bezierPts([W-20,cy+8],[cx+50,cy+8],[cx,cy+8],[W*0.25,cy+8],30,0,0), ROPE.mono, 5);
+      const wraps = Math.floor(p*5), frac=(p*5)%1;
+      for (let w=0;w<5;w++) {
+        const wx=cx-20-w*12;
+        const pts = w<wraps ? circlePts(wx,cy,6,18,24,a=>Math.sin(a)) : w===wraps ? circlePts(wx,cy,6,18,Math.round(frac*24),a=>Math.sin(a)) : [];
+        if (pts.length>1) drawRope(ctx,pts,ROPE.tag,4);
+      }
+      label(ctx,`${Math.min(Math.ceil(p*5),5)} of 5 wraps`, W*0.05, H*0.85, 'rgba(252,130,80,0.9)');
+    }
+  },
+  {
+    label: 'Step 3: Bring tag end back through center — hold wraps',
+    draw(ctx,W,H,p) {
+      const cy=H*0.5, cx=W*0.5;
+      drawRope(ctx, bezierPts([20,cy-8],[cx-50,cy-8],[cx,cy-8],[W*0.75,cy-8],30,0,0), ROPE.leader, 5);
+      drawRope(ctx, bezierPts([W-20,cy+8],[cx+50,cy+8],[cx,cy+8],[W*0.25,cy+8],30,0,0), ROPE.mono, 5);
+      for (let w=0;w<5;w++) drawRope(ctx, circlePts(cx-20-w*12,cy,6,18,24,a=>Math.sin(a)), ROPE.tag, 4);
+      // Tag threading through center
+      const tagY = cy-40+p*50;
+      drawRope(ctx, bezierPts([cx-80,cy-5],[cx-50,cy-20],[cx-20,cy-35],[cx,tagY],20,-0.5,0.8), ROPE.tag, 4);
+      label(ctx,'tag goes through center gap', W*0.05, H*0.85, 'rgba(252,130,80,0.9)');
+      arrow(ctx, W*0.42, H*0.82, cx-5, cy+5);
+    }
+  },
+  {
+    label: 'Step 4: Mirror — wrap right tag 5x around left line, thread center',
+    draw(ctx,W,H,p) {
+      const cy=H*0.5, cx=W*0.5;
+      drawRope(ctx, bezierPts([20,cy-8],[cx-50,cy-8],[cx,cy-8],[W*0.75,cy-8],30,0,0), ROPE.leader, 5);
+      drawRope(ctx, bezierPts([W-20,cy+8],[cx+50,cy+8],[cx,cy+8],[W*0.25,cy+8],30,0,0), ROPE.mono, 5);
+      // Left wraps (done)
+      for (let w=0;w<5;w++) drawRope(ctx, circlePts(cx-20-w*12,cy,6,18,24,a=>Math.sin(a)), ROPE.tag, 4);
+      // Right wraps (animating)
+      const wraps=Math.floor(p*5), frac=(p*5)%1;
+      for (let w=0;w<5;w++) {
+        const wx=cx+20+w*12;
+        const pts = w<wraps ? circlePts(wx,cy,6,18,24,a=>-Math.sin(a)) : w===wraps ? circlePts(wx,cy,6,18,Math.round(frac*24),a=>-Math.sin(a)) : [];
+        if(pts.length>1) drawRope(ctx,pts,ROPE.mono,4);
+      }
+      label(ctx,'now the other side — opposite direction!', W*0.05, H*0.85, 'rgba(180,220,190,0.9)');
+    }
+  },
+  {
+    label: 'Step 5: Moisten well — pull both standing lines. Trim tags.',
+    draw(ctx,W,H,p) {
+      const cy=H*0.5, cx=W*0.5;
+      const tight=p*0.7;
+      // Compact knot body
+      for (let w=0;w<5;w++) {
+        drawRope(ctx, circlePts(cx-15+(w-2)*(10-tight*4),cy,5-tight*2,14-tight*4,24,a=>Math.sin(a)), ROPE.tag, 3.5);
+      }
+      for (let w=0;w<5;w++) {
+        drawRope(ctx, circlePts(cx+15+(w-2)*(10-tight*4),cy,5-tight*2,14-tight*4,24,a=>-Math.sin(a)), ROPE.mono, 3.5);
+      }
+      const pull=p*50;
+      drawRope(ctx, bezierPts([cx-40,cy-8],[cx-60,cy-8],[cx-80-pull,cy-8],[cx-90-pull,cy-8],10,0,0), ROPE.leader, 5);
+      drawRope(ctx, bezierPts([cx+40,cy+8],[cx+60,cy+8],[cx+80+pull,cy+8],[cx+90+pull,cy+8],10,0,0), ROPE.mono, 5);
+      if(p>0.3){ arrow(ctx,cx-55,cy-8,cx-80-pull*0.5,cy-8,'rgba(34,197,94,0.8)'); arrow(ctx,cx+55,cy+8,cx+80+pull*0.5,cy+8,'rgba(34,197,94,0.8)'); }
+      if(p>0.7){ ctx.save(); ctx.font='bold 13px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(34,197,94,0.9)'; ctx.fillText('✓ Blood Knot done!', cx-60, H*0.85); ctx.restore(); }
+      else label(ctx,'pull both standing lines', cx-60, H*0.85, 'rgba(34,197,94,0.9)');
+    }
+  }
+];
+
+// ── SIMPLE KNOTS (loop, perfection, nail, davy, arbor) ────
+const LOOP_STEPS = [
+  { label:'Step 1: Tie a loose overhand knot 4" from tag end — do not tighten', draw(ctx,W,H,p){
+    const cx=W*0.45,cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[cx-40,cy],[cx-20,cy],[cx+W*0.4,cy],30,0,0),ROPE.mono,5);
+    const loopR=30*p;
+    if(p>0.1){ drawRope(ctx,circlePts(cx,cy-loopR*0.5,loopR,loopR*0.6,30,a=>Math.sin(a)),ROPE.mono,5); }
+    label(ctx,'leave it loose!',cx-30,H*0.85,'rgba(245,158,11,0.9)');
+    label(ctx,'4"',W*0.05,cy-20,'rgba(125,211,252,0.7)');
+  }},
+  { label:'Step 2: Thread tag end through the hook eye', draw(ctx,W,H,p){
+    const hx=W*0.78,hy=H*0.45;
+    drawHook(ctx,hx,hy,26);
+    drawRope(ctx,bezierPts([20,hy],[W*0.4,hy],[hx-60,hy],[hx,hy-22],30,0,0),ROPE.mono,5);
+    drawRope(ctx,circlePts(W*0.38,hy-8,22,16,24,a=>Math.sin(a)),ROPE.mono,5);
+    const tagX=hx+p*W*0.12;
+    drawRope(ctx,bezierPts([hx,hy-22],[hx+15,hy-30],[hx+28,hy-15],[tagX,hy-5],20,0.5,0.8),ROPE.tag,4);
+  }},
+  { label:'Step 3: Pass tag back through the overhand knot loop', draw(ctx,W,H,p){
+    const cx=W*0.38,cy=H*0.48,hx=W*0.75;
+    drawHook(ctx,hx,cy,22);
+    drawRope(ctx,bezierPts([20,cy],[cx-30,cy],[cx,cy],[hx,cy-20],30,0,0),ROPE.mono,5);
+    drawRope(ctx,circlePts(cx,cy-10,22,16,24,a=>Math.sin(a)),ROPE.mono,5);
+    // Tag threading back through loop
+    const tY=cy-35+p*50;
+    drawRope(ctx,bezierPts([hx+20,cy],[hx,cy+10],[cx+30,cy+20],[cx,tY],25,0.8,0.2),ROPE.tag,4);
+    label(ctx,'same direction as before!',cx-30,H*0.88,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 4: Wrap tag around standing line 5 times', draw(ctx,W,H,p){
+    const cx=W*0.5,cy=H*0.48;
+    drawRope(ctx,bezierPts([20,cy],[cx-50,cy],[cx,cy],[W-20,cy],30,0,0),ROPE.mono,5);
+    const wraps=Math.floor(p*5),frac=(p*5)%1;
+    for(let w=0;w<5;w++){
+      const wx=cx-10-w*12;
+      const pts=w<wraps?circlePts(wx,cy,6,16,24,a=>Math.sin(a)):w===wraps?circlePts(wx,cy,6,16,Math.round(frac*24),a=>Math.sin(a)):[];
+      if(pts.length>1) drawRope(ctx,pts,ROPE.tag,4);
+    }
+    label(ctx,`${Math.min(Math.ceil(p*5),5)} of 5 wraps`,W*0.05,H*0.85,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 5: Pass tag through overhand loop again. Set loop size. Trim.', draw(ctx,W,H,p){
+    const cx=W*0.45,cy=H*0.48,hx=W*0.75;
+    drawHook(ctx,hx,cy,22);
+    // Loop stays open
+    const loopSize=18-p*6;
+    drawRope(ctx,circlePts(cx-60,cy,loopSize,loopSize*0.7,30,a=>Math.sin(a)),ROPE.mono,4);
+    drawRope(ctx,bezierPts([20,cy],[cx-80,cy],[cx-30,cy],[cx,cy],20,0,0),ROPE.mono,5);
+    for(let w=0;w<5;w++) drawRope(ctx,circlePts(cx+w*11,cy,5,14,24,a=>Math.sin(a)),ROPE.tag,4);
+    // Line to hook
+    drawRope(ctx,bezierPts([cx+55,cy],[cx+80,cy],[hx-30,cy],[hx,cy-20],20,0,0),ROPE.mono,5);
+    if(p>0.7){ ctx.save(); ctx.font='bold 13px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(34,197,94,0.9)'; ctx.fillText('✓ Loop Knot — fly swings free!',W*0.05,H*0.85); ctx.restore(); }
+    else label(ctx,'loop size = fly action',W*0.05,H*0.85,'rgba(125,211,252,0.9)');
+  }}
+];
+
+const NAIL_STEPS = [
+  { label:'Step 1: Hold a small tube alongside the fly line tip', draw(ctx,W,H,p){
+    const cy=H*0.5;
+    // Thick fly line
+    drawRope(ctx,bezierPts([20,cy],[W*0.4,cy],[W*0.6,cy],[W-20,cy],30,0,0),ROPE.leader,8);
+    // Tube
+    if(p>0.3){
+      ctx.save(); ctx.fillStyle='rgba(100,120,140,0.6)'; ctx.strokeStyle='rgba(150,180,200,0.8)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(W*0.5,cy-8,60,8,3); ctx.fill(); ctx.stroke(); ctx.restore();
+      label(ctx,'tube/straw',W*0.53,cy-15,'rgba(150,180,200,0.9)');
+    }
+    label(ctx,'fly line (thick)',W*0.05,cy-20,'rgba(200,180,100,0.9)');
+  }},
+  { label:'Step 2: Lay leader alongside. Make 6 tight wraps over all three', draw(ctx,W,H,p){
+    const cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[W*0.4,cy],[W*0.6,cy],[W-20,cy],30,0,0),ROPE.leader,8);
+    ctx.save(); ctx.fillStyle='rgba(100,120,140,0.4)'; ctx.beginPath(); ctx.roundRect(W*0.48,cy-7,62,7,3); ctx.fill(); ctx.restore();
+    // Leader
+    drawRope(ctx,bezierPts([W*0.5,cy-12],[W*0.6,cy-12],[W*0.7,cy-12],[W-20,cy-12],20,0,0),ROPE.mono,4);
+    // Wraps
+    const wraps=Math.floor(p*6),frac=(p*6)%1;
+    for(let w=0;w<6;w++){
+      const wx=W*0.56+w*9;
+      const pts=w<wraps?circlePts(wx,cy-4,5,12,20,a=>Math.sin(a)):w===wraps?circlePts(wx,cy-4,5,12,Math.round(frac*20),a=>Math.sin(a)):[];
+      if(pts.length>1) drawRope(ctx,pts,ROPE.tag,3.5);
+    }
+    label(ctx,`${Math.min(Math.ceil(p*6),6)} of 6 wraps`,W*0.05,H*0.85,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 3: Thread leader butt back through the tube, then remove tube', draw(ctx,W,H,p){
+    const cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[W*0.4,cy],[W*0.65,cy],[W-20,cy],30,0,0),ROPE.leader,8);
+    for(let w=0;w<6;w++) drawRope(ctx,circlePts(W*0.56+w*9,cy-4,5,12,20,a=>Math.sin(a)),ROPE.tag,3.5);
+    // Tube sliding out
+    const tubeX=W*0.48+p*80;
+    if(p<0.8){ ctx.save(); ctx.fillStyle='rgba(100,120,140,0.4)'; ctx.beginPath(); ctx.roundRect(tubeX,cy-7,62-p*30,7,3); ctx.fill(); ctx.restore(); }
+    label(ctx,p>0.6?'tube removed — wraps hold shape':'threading through tube…',W*0.05,H*0.85,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 4: Moisten and pull leader tag and fly line simultaneously', draw(ctx,W,H,p){
+    const cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[W*0.3,cy],[W*0.45,cy],[W*0.52,cy],30,0,0),ROPE.leader,8);
+    drawRope(ctx,bezierPts([W-20,cy],[W*0.7,cy],[W*0.6,cy],[W*0.52,cy],20,0,0),ROPE.mono,4);
+    for(let w=0;w<6;w++) drawRope(ctx,circlePts(W*0.52+w*6,cy,4-p*1.5,10-p*3,20,a=>Math.sin(a)),ROPE.tag,3);
+    if(p>0.3){ arrow(ctx,W*0.3,cy,W*0.1,cy,'rgba(34,197,94,0.8)'); arrow(ctx,W*0.7,cy,W*0.85,cy,'rgba(34,197,94,0.8)'); }
+    if(p>0.7){ ctx.save(); ctx.font='bold 13px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(34,197,94,0.9)'; ctx.fillText('✓ Nail Knot — low profile!',W*0.05,H*0.85); ctx.restore(); }
+  }}
+];
+
+const DAVY_STEPS = [
+  { label:'Step 1: Thread tippet through eye. Form a loop over standing line', draw(ctx,W,H,p){
+    const hx=W*0.65,hy=H*0.45;
+    drawHook(ctx,hx,hy,26);
+    drawRope(ctx,bezierPts([20,hy],[W*0.35,hy],[hx-50,hy],[hx,hy-22],30,0,0),ROPE.mono,5);
+    const tagOut=hx+p*(W*0.18);
+    drawRope(ctx,bezierPts([hx,hy-22],[hx+15,hy-32],[hx+30,hy-20],[tagOut,hy+5],20,0.5,0.8),ROPE.tag,4);
+    label(ctx,'tag exits eye',hx+5,hy-40);
+  }},
+  { label:'Step 2: Pass the tag end once through the loop', draw(ctx,W,H,p){
+    const hx=W*0.65,hy=H*0.45;
+    drawHook(ctx,hx,hy,26);
+    drawRope(ctx,bezierPts([20,hy],[W*0.35,hy],[hx-50,hy],[hx,hy-22],30,0,0),ROPE.mono,5);
+    // Loop formed
+    drawRope(ctx,bezierPts([hx+35,hy+5],[hx+55,hy+25],[hx+60,hy-10],[hx+20,hy-28],25,0.3,0.8),ROPE.tag,4);
+    // Tag threading through loop
+    const tY=hy-25+p*40;
+    drawRope(ctx,bezierPts([hx+20,hy-28],[hx+10,hy-15],[hx+5,hy],[hx+10,tY],15,0.8,0.2),ROPE.tag,4);
+    label(ctx,'through once only — that\'s it!',W*0.05,H*0.85,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 3: Moisten and pull standing line. Trim tag very close.', draw(ctx,W,H,p){
+    const hx=W*0.65,hy=H*0.45;
+    drawHook(ctx,hx,hy,26);
+    drawRope(ctx,bezierPts([20-p*10,hy],[W*0.25,hy],[hx-50,hy],[hx,hy-22],30,0,0),ROPE.mono,5);
+    // Compact knot at eye
+    drawRope(ctx,circlePts(hx+8,hy-18,10-p*4,8-p*3,20,a=>Math.sin(a)*0.6),ROPE.tag,3.5);
+    const trim=25-p*18;
+    drawRope(ctx,bezierPts([hx+15,hy-5],[hx+20,hy+5],[hx+trim,hy+10],[hx+trim+5,hy+8],10,0.3,0.2),ROPE.tag,3);
+    if(p>0.3) arrow(ctx,W*0.25,hy,W*0.08,hy,'rgba(34,197,94,0.8)');
+    if(p>0.7){ ctx.save(); ctx.font='bold 13px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(34,197,94,0.9)'; ctx.fillText('✓ Davy Knot — fastest tie!',W*0.05,H*0.85); ctx.restore(); }
+    else label(ctx,'pull standing line, not tag',W*0.05,H*0.85,'rgba(34,197,94,0.9)');
+  }}
+];
+
+const PERFECTION_STEPS = [
+  { label:'Step 1: Make Loop A — hold the crossing point', draw(ctx,W,H,p){
+    const cx=W*0.45,cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[cx-60,cy],[cx-20,cy],[cx+W*0.4,cy],30,0,0),ROPE.mono,5);
+    const r=35*p;
+    if(p>0.1){ drawRope(ctx,circlePts(cx,cy-r*0.4,r,r*0.7,30,a=>Math.sin(a)),ROPE.mono,5); }
+    label(ctx,'Loop A — hold crossing point',cx-70,H*0.85,'rgba(125,211,252,0.9)');
+  }},
+  { label:'Step 2: Make Loop B in front of Loop A', draw(ctx,W,H,p){
+    const cx=W*0.45,cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[cx-60,cy],[cx-20,cy],[cx+W*0.4,cy],30,0,0),ROPE.mono,5);
+    drawRope(ctx,circlePts(cx-5,cy-18,32,24,30,a=>Math.sin(a)*0.9),ROPE.mono,5);
+    const r2=20*p;
+    if(p>0.1){ drawRope(ctx,circlePts(cx+12,cy-10,r2,r2*0.7,24,a=>-Math.sin(a)*0.8+0.3),ROPE.tag,4); }
+    label(ctx,'Loop B — in FRONT of Loop A',cx-70,H*0.85,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 3: Pass tag end between the two loops', draw(ctx,W,H,p){
+    const cx=W*0.45,cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[cx-60,cy],[cx-20,cy],[cx+W*0.4,cy],30,0,0),ROPE.mono,5);
+    drawRope(ctx,circlePts(cx-5,cy-18,32,24,30,a=>Math.sin(a)*0.9),ROPE.mono,5);
+    drawRope(ctx,circlePts(cx+12,cy-10,20,14,24,a=>-Math.sin(a)*0.8+0.3),ROPE.tag,4);
+    const tagY=cy-30+p*60;
+    drawRope(ctx,bezierPts([cx+30,cy+5],[cx+28,cy-10],[cx+22,cy-20],[cx+18,tagY],15,0.2,0.8),ROPE.tag,4);
+    label(ctx,'tag goes BETWEEN the two loops',W*0.05,H*0.88,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 4: Pull Loop B through Loop A — the finished loop emerges', draw(ctx,W,H,p){
+    const cx=W*0.45,cy=H*0.5;
+    drawRope(ctx,bezierPts([20,cy],[cx-60,cy],[cx-20,cy],[cx+W*0.4,cy],30,0,0),ROPE.mono,5);
+    const emerge=p*30;
+    drawRope(ctx,circlePts(cx-5+emerge*0.3,cy-18-emerge*0.5,32-emerge*0.5,24-emerge*0.3,30,a=>Math.sin(a)*0.9),ROPE.mono,5);
+    drawRope(ctx,circlePts(cx+emerge,cy-30-emerge,14+emerge*0.3,10+emerge*0.2,24,a=>Math.sin(a)*0.7),ROPE.tag,4);
+    label(ctx,'Loop B emerges as finished loop!',W*0.05,H*0.85,'rgba(34,197,94,0.9)');
+  }},
+  { label:'Step 5: Tighten by pulling loop and standing line apart', draw(ctx,W,H,p){
+    const cx=W*0.45,cy=H*0.5;
+    const pull=p*40;
+    drawRope(ctx,bezierPts([20,cy],[cx-80-pull*0.3,cy],[cx-60,cy],[cx,cy],20,0,0),ROPE.mono,5);
+    drawRope(ctx,circlePts(cx,cy-22-pull*0.4,16,12,30,a=>Math.sin(a)*0.8),ROPE.tag,4);
+    if(p>0.3){ arrow(ctx,cx-40,cy,cx-70-pull*0.3,cy,'rgba(34,197,94,0.8)'); arrow(ctx,cx,cy-30,cx,cy-50-pull*0.3,'rgba(34,197,94,0.8)'); }
+    if(p>0.7){ ctx.save(); ctx.font='bold 13px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(34,197,94,0.9)'; ctx.fillText('✓ Perfection Loop!',cx-60,H*0.85); ctx.restore(); }
+  }}
+];
+
+const ARBOR_STEPS = [
+  { label:'Step 1: Pass backing around the reel arbor', draw(ctx,W,H,p){
+    const cx=W*0.4,cy=H*0.5;
+    ctx.save(); ctx.fillStyle='#161b22'; ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(cx-35,cy-35,70,70,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#0d1117'; ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#2d3748'; ctx.lineWidth=1.5; ctx.stroke(); ctx.restore();
+    label(ctx,'reel',cx-12,cy+5,'rgba(100,116,139,0.8)');
+    const lineEnd=cx+35+p*W*0.25;
+    drawRope(ctx,bezierPts([cx+35,cy-5],[cx+60,cy-5],[lineEnd-20,cy-5],[lineEnd,cy-5],20,0,0),ROPE.mono,4);
+    if(p>0.5){
+      drawRope(ctx,bezierPts([cx+35,cy+5],[cx+55,cy+20],[cx+45,cy+35],[cx+30,cy+35],15,0,0.5),ROPE.mono,4);
+    }
+    label(ctx,'wrap around arbor',W*0.55,H*0.85,'rgba(125,211,252,0.9)');
+  }},
+  { label:'Step 2: Tie overhand knot in tag around the standing line', draw(ctx,W,H,p){
+    const kx=W*0.6,cy=H*0.5;
+    ctx.save(); ctx.fillStyle='#161b22'; ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(W*0.1,cy-30,60,60,10); ctx.fill(); ctx.stroke(); ctx.restore();
+    drawRope(ctx,bezierPts([W*0.17,cy],[W*0.35,cy],[kx-40,cy],[kx,cy],20,0,0),ROPE.mono,4);
+    const r=25*p;
+    if(p>0.1){ drawRope(ctx,circlePts(kx,cy-r*0.4,r,r*0.6,24,a=>Math.sin(a)),ROPE.tag,3.5); }
+    label(ctx,'overhand knot in tag around standing line',W*0.05,H*0.85,'rgba(252,130,80,0.9)');
+  }},
+  { label:'Step 3: Tie a SECOND overhand knot in tag alone — stopper knot', draw(ctx,W,H,p){
+    const k1x=W*0.55,k2x=W*0.72,cy=H*0.5;
+    ctx.save(); ctx.fillStyle='#161b22'; ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(W*0.1,cy-30,60,60,10); ctx.fill(); ctx.stroke(); ctx.restore();
+    drawRope(ctx,bezierPts([W*0.17,cy],[W*0.35,cy],[k1x-30,cy],[k1x,cy],20,0,0),ROPE.mono,4);
+    drawRope(ctx,circlePts(k1x,cy-14,20,14,24,a=>Math.sin(a)),ROPE.tag,3.5);
+    const r2=16*p;
+    drawRope(ctx,bezierPts([k1x+25,cy],[k1x+40,cy],[k2x-15,cy],[k2x,cy],15,0,0),ROPE.tag,3.5);
+    if(p>0.1){ drawRope(ctx,circlePts(k2x,cy-r2*0.4,r2,r2*0.6,20,a=>Math.sin(a)*0.8),ROPE.tag,3.5); }
+    label(ctx,'stopper prevents pull-through',W*0.05,H*0.85,'rgba(245,158,11,0.9)');
+  }},
+  { label:'Step 4: Pull standing line — knot slides to arbor. Stopper holds.', draw(ctx,W,H,p){
+    const cy=H*0.5;
+    ctx.save(); ctx.fillStyle='#161b22'; ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(W*0.1,cy-30,60,60,10); ctx.fill(); ctx.stroke(); ctx.restore();
+    const kx=W*0.18+p*(W*0.12);
+    drawRope(ctx,bezierPts([W*0.17,cy],[W*0.3,cy],[kx-20,cy],[kx,cy],20,0,0),ROPE.mono,4);
+    drawRope(ctx,circlePts(kx+5,cy-10,14-p*4,10-p*3,20,a=>Math.sin(a)),ROPE.tag,3.5);
+    drawRope(ctx,bezierPts([kx+20,cy],[W*0.55,cy],[W*0.72,cy],[W-20,cy],20,0,0),ROPE.mono,4);
+    drawRope(ctx,circlePts(W*0.72,cy-10,12,9,18,a=>Math.sin(a)*0.7),ROPE.tag,3);
+    if(p>0.3) arrow(ctx,W*0.6,cy,W*0.75,cy,'rgba(34,197,94,0.8)');
+    if(p>0.7){ ctx.save(); ctx.font='bold 13px "IBM Plex Mono",monospace'; ctx.fillStyle='rgba(34,197,94,0.9)'; ctx.fillText('✓ Arbor Knot secure!',W*0.05,H*0.85); ctx.restore(); }
+  }}
+];
+
+// Map knot types to step arrays
+const KNOT_STEPS_MAP = {
+  clinch:     CLINCH_STEPS,
+  surgeons:   SURGEONS_STEPS,
+  loop:       LOOP_STEPS,
+  perfection: PERFECTION_STEPS,
+  blood:      BLOOD_STEPS,
+  nail:       NAIL_STEPS,
+  davy:       DAVY_STEPS,
+  arbor:      ARBOR_STEPS,
+};
+
+const KNOT_DATA = [
+  { name:'Improved Clinch Knot',   use:'Fly to tippet',                  strength:'95%', tip:'Wet before tightening. 5 wraps for light mono, 6 for heavier.', type:'clinch' },
+  { name:"Surgeon's Knot",         use:'Tippet to leader',               strength:'90%', tip:'Pull all 4 ends simultaneously for even seating.', type:'surgeons' },
+  { name:'Non-Slip Loop Knot',     use:'Fly to tippet — free swing',     strength:'95%', tip:'Small loop for nymphs, 1/4" loop for streamers.', type:'loop' },
+  { name:'Perfection Loop',        use:'Leader butt loop connection',     strength:'85%', tip:'Keep loop small and tight — sloppy loops twist leaders.', type:'perfection' },
+  { name:'Blood Knot',             use:'Joining same-diameter lines',     strength:'90%', tip:'Works best within one X size. Wet thoroughly first.', type:'blood' },
+  { name:'Nail Knot',              use:'Fly line to leader butt',         strength:'95%', tip:'A drinking straw works better than a nail.', type:'nail' },
+  { name:'Davy Knot',              use:'Fastest fly attachment',          strength:'85%', tip:'Fastest knot to tie streamside — great for quick changes.', type:'davy' },
+  { name:'Arbor Knot',             use:'Backing to reel',                 strength:'70%', tip:'Only needs to hold backing tension, not direct fish pressure.', type:'arbor' },
+];
+
+// ── KNOT PLAYER STATE ─────────────────────────────────────
+const knotPlayers = {};
 
 function toggleKnot(i) {
   const card = document.getElementById('kc-' + i);
   const wasOpen = card.classList.contains('open');
-  // Close all
-  document.querySelectorAll('.knot-card').forEach(c => c.classList.remove('open'));
-  if (activeKnotCanvas) { activeKnotCanvas.dispose(); activeKnotCanvas = null; }
+  document.querySelectorAll('.knot-card.open').forEach(c => {
+    const idx = c.id.replace('kc-','');
+    if (knotPlayers[idx]) { knotPlayers[idx].stop(); delete knotPlayers[idx]; }
+    c.classList.remove('open');
+  });
   if (!wasOpen) {
     card.classList.add('open');
-    setTimeout(() => initKnot3D(i), 50);
+    setTimeout(() => {
+      const player = new KnotPlayer(i);
+      knotPlayers[i] = player;
+      player.start();
+    }, 60);
   }
+}
+
+class KnotPlayer {
+  constructor(i) {
+    this.i = i;
+    this.type = KNOT_DATA[i].type;
+    this.steps = KNOT_STEPS_MAP[this.type] || CLINCH_STEPS;
+    this.step = 0;
+    this.progress = 0;
+    this.phase = 'animating'; // animating | holding
+    this.holdTimer = null;
+    this.raf = null;
+    this.lastTime = null;
+    this.ANIM_DURATION = 2200;  // ms per step animation
+    this.HOLD_DURATION = 1400;  // ms to hold at end of each step
+    this.canvas = document.getElementById('knot-canvas-' + i);
+    if (this.canvas) {
+      const w = this.canvas.parentElement.clientWidth || 500;
+      this.canvas.width = w;
+      this.canvas.height = 200;
+      this.W = w; this.H = 200;
+      this.ctx = this.canvas.getContext('2d');
+    }
+    this.updateUI();
+  }
+
+  start() { this.raf = requestAnimationFrame(t => this.tick(t)); }
+
+  stop() {
+    if (this.raf) cancelAnimationFrame(this.raf);
+    clearTimeout(this.holdTimer);
+  }
+
+  tick(time) {
+    if (!this.lastTime) this.lastTime = time;
+    const dt = time - this.lastTime;
+    this.lastTime = time;
+
+    if (this.phase === 'animating') {
+      this.progress = Math.min(1, this.progress + dt / this.ANIM_DURATION);
+      this.draw();
+      if (this.progress >= 1) {
+        this.phase = 'holding';
+        this.holdTimer = setTimeout(() => this.nextStep(), this.HOLD_DURATION);
+      } else {
+        this.raf = requestAnimationFrame(t => this.tick(t));
+      }
+    }
+  }
+
+  nextStep() {
+    if (this.step < this.steps.length - 1) {
+      this.step++;
+      this.progress = 0;
+      this.phase = 'animating';
+      this.lastTime = null;
+      this.updateUI();
+      this.raf = requestAnimationFrame(t => this.tick(t));
+    } else {
+      this.phase = 'done';
+      this.updateUI();
+    }
+  }
+
+  goTo(s) {
+    clearTimeout(this.holdTimer);
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.step = Math.max(0, Math.min(this.steps.length - 1, s));
+    this.progress = s < this.step ? 0 : 1;
+    this.phase = 'animating';
+    this.lastTime = null;
+    this.updateUI();
+    this.draw();
+    this.raf = requestAnimationFrame(t => this.tick(t));
+  }
+
+  replay() {
+    this.step = 0;
+    this.progress = 0;
+    this.phase = 'animating';
+    this.lastTime = null;
+    this.updateUI();
+    this.raf = requestAnimationFrame(t => this.tick(t));
+  }
+
+  draw() {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    ctx.clearRect(0,0,this.W,this.H);
+    // Background
+    ctx.fillStyle = '#080c10';
+    ctx.fillRect(0,0,this.W,this.H);
+    // Subtle grid
+    ctx.strokeStyle='rgba(59,130,246,0.05)'; ctx.lineWidth=1;
+    for(let x=0;x<this.W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,this.H);ctx.stroke();}
+    for(let y=0;y<this.H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(this.W,y);ctx.stroke();}
+    // Draw current step
+    const stepDef = this.steps[this.step];
+    if (stepDef) stepDef.draw(ctx, this.W, this.H, this.progress);
+  }
+
+  updateUI() {
+    const total = this.steps.length;
+    const cur = this.step + 1;
+    // Progress dots
+    const dotsEl = document.getElementById('knot-dots-' + this.i);
+    if (dotsEl) {
+      dotsEl.innerHTML = Array.from({length:total},(_,i)=>
+        `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px;background:${i===this.step?'var(--accent)':'rgba(125,211,252,0.2)'};transition:background 0.3s"></span>`
+      ).join('');
+    }
+    // Step counter
+    const cntEl = document.getElementById('knot-step-count-' + this.i);
+    if (cntEl) cntEl.textContent = `Step ${cur} of ${total}${this.phase==='done'?' — Done!':''}`;
+    // Label
+    const lblEl = document.getElementById('knot-step-label-' + this.i);
+    if (lblEl) lblEl.textContent = this.steps[this.step]?.label || '';
+    // Prev/next buttons
+    const prevEl = document.getElementById('knot-prev-' + this.i);
+    const nextEl = document.getElementById('knot-next-' + this.i);
+    if (prevEl) prevEl.disabled = this.step === 0;
+    if (nextEl) nextEl.disabled = this.step === total - 1;
+  }
+}
+
+function knotPrev(i, e) {
+  e.stopPropagation();
+  if (knotPlayers[i]) knotPlayers[i].goTo(knotPlayers[i].step - 1);
+}
+function knotNext(i, e) {
+  e.stopPropagation();
+  if (knotPlayers[i]) knotPlayers[i].goTo(knotPlayers[i].step + 1);
+}
+function knotReplay(i, e) {
+  e.stopPropagation();
+  if (knotPlayers[i]) knotPlayers[i].replay();
 }
 
 function renderKnots() {
@@ -2837,402 +3622,19 @@ function renderKnots() {
         </div>
       </div>
       <div class="knot-body">
-        <div class="knot-diagram" id="knot-canvas-wrap-${i}">
-          <canvas id="knot-canvas-${i}" style="width:100%;height:180px;border-radius:3px"></canvas>
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin:-8px 0 12px">
-          <button class="knot-animate-btn" onclick="event.stopPropagation();replayKnot(${i})">&#9654; Replay</button>
+        <canvas id="knot-canvas-${i}" style="width:100%;height:200px;border-radius:3px;display:block"></canvas>
+        <div style="margin:8px 0 4px;text-align:center" id="knot-dots-${i}"></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--accent);text-align:center;margin-bottom:8px" id="knot-step-count-${i}"></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--text);text-align:center;min-height:2em;margin-bottom:12px;padding:0 8px" id="knot-step-label-${i}"></div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px" onclick="event.stopPropagation()">
+          <button class="knot-animate-btn" id="knot-prev-${i}" onclick="knotPrev(${i},event)">&#9664; Prev</button>
+          <button class="knot-animate-btn" onclick="knotReplay(${i},event)">&#8635; Replay</button>
+          <button class="knot-animate-btn" id="knot-next-${i}" onclick="knotNext(${i},event)">Next &#9654;</button>
         </div>
         ${k.steps.map((s, si) => `<div class="knot-step-row"><div class="knot-step-n">${si+1}</div><div>${s}</div></div>`).join('')}
         <div class="knot-pro-tip">&#128161; ${k.tip}</div>
       </div>
     </div>`).join('');
-}
-
-function replayKnot(i) {
-  if (activeKnotCanvas) { activeKnotCanvas.replay(); }
-}
-
-function initKnot3D(i) {
-  const canvas = document.getElementById('knot-canvas-' + i);
-  if (!canvas) return;
-  const type = KNOT_DATA[i].type;
-  const renderer = new KnotRenderer(canvas, type);
-  renderer.start();
-  activeKnotCanvas = renderer;
-}
-
-// ─── 3D KNOT RENDERER ─────────────────────────────────────
-class KnotRenderer {
-  constructor(canvas, type) {
-    this.canvas = canvas;
-    this.type = type;
-    this.animFrame = null;
-    this.t = 0;
-    this.speed = 0.012;
-    this.running = true;
-    // Size canvas
-    const wrap = canvas.parentElement;
-    this.W = wrap.clientWidth || 500;
-    this.H = 180;
-    canvas.width = this.W;
-    canvas.height = this.H;
-    this.ctx = canvas.getContext('2d');
-    this.buildPath();
-  }
-
-  buildPath() {
-    const type = this.type;
-    const cx = this.W / 2;
-    const cy = this.H / 2;
-    // Each knot type returns an array of {x,y,z,r} control points
-    // r = rope "depth" for 3D shading (0=front, 1=back)
-    if (type === 'clinch') this.path = buildClinch(cx, cy);
-    else if (type === 'surgeons') this.path = buildSurgeons(cx, cy);
-    else if (type === 'loop') this.path = buildLoop(cx, cy);
-    else if (type === 'perfection') this.path = buildPerfection(cx, cy);
-    else if (type === 'blood') this.path = buildBlood(cx, cy);
-    else if (type === 'nail') this.path = buildNail(cx, cy);
-    else if (type === 'davy') this.path = buildDavy(cx, cy);
-    else if (type === 'arbor') this.path = buildArbor(cx, cy);
-    else this.path = buildClinch(cx, cy);
-    this.totalLen = this.path.length;
-  }
-
-  start() { this.loop(); }
-
-  replay() {
-    this.t = 0;
-    this.running = true;
-  }
-
-  dispose() {
-    this.running = false;
-    if (this.animFrame) cancelAnimationFrame(this.animFrame);
-  }
-
-  loop() {
-    if (!this.running) return;
-    this.draw();
-    this.t = Math.min(this.t + this.speed, 1);
-    this.animFrame = requestAnimationFrame(() => this.loop());
-  }
-
-  draw() {
-    const ctx = this.ctx;
-    const W = this.W, H = this.H;
-    ctx.clearRect(0, 0, W, H);
-
-    // Dark background
-    ctx.fillStyle = '#080c10';
-    ctx.fillRect(0, 0, W, H);
-
-    // Subtle grid lines
-    ctx.strokeStyle = 'rgba(59,130,246,0.06)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-    const pts = this.path;
-    const visible = Math.max(2, Math.floor(pts.length * this.t));
-
-    // Draw shadow pass first (for depth)
-    for (let i = 1; i < visible; i++) {
-      const p0 = pts[i-1], p1 = pts[i];
-      const depth = (p0.z + p1.z) / 2; // -1 to 1, -1=back 1=front
-      if (depth < 0) { // only draw back segments in shadow pass
-        ctx.beginPath();
-        ctx.moveTo(p0.x, p0.y);
-        ctx.lineTo(p1.x, p1.y);
-        ctx.strokeStyle = `rgba(20,30,50,0.9)`;
-        ctx.lineWidth = 10;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-        this.drawRopeSegment(ctx, p0, p1, depth, true);
-      }
-    }
-
-    // Draw front segments on top
-    for (let i = 1; i < visible; i++) {
-      const p0 = pts[i-1], p1 = pts[i];
-      const depth = (p0.z + p1.z) / 2;
-      if (depth >= 0) {
-        this.drawRopeSegment(ctx, p0, p1, depth, false);
-      }
-    }
-
-    // Draw animated tip (glowing end point)
-    if (this.t < 1 && visible >= 2) {
-      const tip = pts[visible - 1];
-      const grd = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 8);
-      grd.addColorStop(0, 'rgba(125,211,252,0.9)');
-      grd.addColorStop(1, 'rgba(125,211,252,0)');
-      ctx.fillStyle = grd;
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Label
-    ctx.fillStyle = 'rgba(100,116,139,0.7)';
-    ctx.font = '10px IBM Plex Mono, monospace';
-    ctx.fillText(this.t >= 1 ? 'Click Replay to retie' : 'Tying\u2026', 10, H - 8);
-  }
-
-  drawRopeSegment(ctx, p0, p1, depth, isShadow) {
-    // depth: -1=far back, 0=middle, 1=front
-    const normDepth = (depth + 1) / 2; // 0 to 1
-
-    // Color: fluorescent mono line — pale yellow-green with specular
-    // Back segments are darker/cooler, front are brighter/warmer
-    const baseR = isShadow ? 60 : Math.round(80 + normDepth * 120);
-    const baseG = isShadow ? 80 : Math.round(140 + normDepth * 60);
-    const baseB = isShadow ? 90 : Math.round(100 + normDepth * 80);
-    const alpha = isShadow ? 0.5 : 0.85 + normDepth * 0.15;
-
-    // Width varies with depth (perspective)
-    const width = isShadow ? 5 : 5 + normDepth * 3;
-
-    // Main rope body
-    ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
-    ctx.strokeStyle = `rgba(${baseR},${baseG},${baseB},${alpha})`;
-    ctx.lineWidth = width;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    if (!isShadow) {
-      // Highlight — specular sheen on top of rope
-      const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-      const nx = -Math.sin(angle) * (width * 0.3);
-      const ny =  Math.cos(angle) * (width * 0.3);
-      ctx.beginPath();
-      ctx.moveTo(p0.x + nx, p0.y + ny);
-      ctx.lineTo(p1.x + nx, p1.y + ny);
-      ctx.strokeStyle = `rgba(220,245,255,${0.15 + normDepth * 0.25})`;
-      ctx.lineWidth = width * 0.35;
-      ctx.stroke();
-
-      // Core shadow — underside of rope
-      ctx.beginPath();
-      ctx.moveTo(p0.x - nx, p0.y - ny);
-      ctx.lineTo(p1.x - nx, p1.y - ny);
-      ctx.strokeStyle = `rgba(20,40,60,${0.3 + normDepth * 0.2})`;
-      ctx.lineWidth = width * 0.25;
-      ctx.stroke();
-    }
-  }
-}
-
-// ─── KNOT PATH BUILDERS ───────────────────────────────────
-// Each returns array of {x, y, z} points
-// z ranges -1 (behind) to 1 (in front) for depth ordering
-
-function sampleBezier(p0, p1, p2, p3, steps) {
-  const pts = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const mt = 1 - t;
-    const x = mt*mt*mt*p0[0] + 3*mt*mt*t*p1[0] + 3*mt*t*t*p2[0] + t*t*t*p3[0];
-    const y = mt*mt*mt*p0[1] + 3*mt*mt*t*p1[1] + 3*mt*t*t*p2[1] + t*t*t*p3[1];
-    const z = mt*mt*mt*p0[2] + 3*mt*mt*t*p1[2] + 3*mt*t*t*p2[2] + t*t*t*p3[2];
-    pts.push({x, y, z});
-  }
-  return pts;
-}
-
-function buildClinch(cx, cy) {
-  const pts = [];
-  // Straight left section
-  for (let i = 0; i <= 20; i++) pts.push({x: 30 + i*4, y: cy, z: 0});
-  // 5 wraps around the standing line
-  for (let w = 0; w < 5; w++) {
-    for (let i = 0; i <= 20; i++) {
-      const a = (i / 20) * Math.PI * 2;
-      const rx = 14 - w * 1.5;
-      const ry = 18 - w;
-      pts.push({
-        x: cx - 60 + w * 14 + Math.cos(a) * 6,
-        y: cy + Math.sin(a) * ry,
-        z: Math.sin(a)
-      });
-    }
-  }
-  // Thread back through loops
-  for (let i = 0; i <= 20; i++) {
-    const t = i / 20;
-    pts.push({x: cx - 10 + t * 30, y: cy - 30 + t * 28, z: -0.5 + t});
-  }
-  // Hook eye circle
-  for (let i = 0; i <= 30; i++) {
-    const a = (i / 30) * Math.PI * 2 - Math.PI / 2;
-    pts.push({x: cx + 70 + Math.cos(a) * 16, y: cy + Math.sin(a) * 16, z: Math.sin(a) * 0.5});
-  }
-  return pts;
-}
-
-function buildSurgeons(cx, cy) {
-  const pts = [];
-  // Two parallel lines overlapping
-  for (let i = 0; i <= 15; i++) pts.push({x: 20 + i*4, y: cy - 10, z: 0.3});
-  for (let i = 0; i <= 15; i++) pts.push({x: 20 + i*4, y: cy + 10, z: -0.3});
-  // First overhand loop
-  for (let i = 0; i <= 40; i++) {
-    const a = (i / 40) * Math.PI * 2;
-    pts.push({x: cx - 30 + Math.cos(a) * 40, y: cy + Math.sin(a) * 30, z: Math.sin(a)});
-  }
-  // Second overhand loop (tighter)
-  for (let i = 0; i <= 40; i++) {
-    const a = (i / 40) * Math.PI * 2;
-    pts.push({x: cx + 10 + Math.cos(a) * 30, y: cy + Math.sin(a) * 22, z: -Math.sin(a) * 0.8});
-  }
-  // Right tails
-  for (let i = 0; i <= 20; i++) pts.push({x: cx + 60 + i*5, y: cy - 10, z: 0.3});
-  for (let i = 0; i <= 20; i++) pts.push({x: cx + 60 + i*5, y: cy + 10, z: -0.3});
-  return pts;
-}
-
-function buildLoop(cx, cy) {
-  const pts = [];
-  // Standing line
-  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i*4, y: cy, z: 0});
-  // Overhand knot loop
-  for (let i = 0; i <= 30; i++) {
-    const a = (i/30) * Math.PI * 2;
-    pts.push({x: cx - 50 + Math.cos(a) * 22, y: cy + Math.sin(a) * 22, z: Math.sin(a)});
-  }
-  // Line to hook eye
-  for (let i = 0; i <= 20; i++) pts.push({x: cx - 10 + i * 5, y: cy, z: 0.2});
-  // Hook eye
-  for (let i = 0; i <= 30; i++) {
-    const a = (i/30) * Math.PI * 2 - Math.PI/2;
-    pts.push({x: cx + 70 + Math.cos(a) * 14, y: cy + Math.sin(a) * 14, z: Math.sin(a) * 0.5});
-  }
-  // Wraps back
-  for (let w = 0; w < 5; w++) {
-    for (let i = 0; i <= 15; i++) {
-      const a = (i/15) * Math.PI * 2;
-      pts.push({x: cx - 20 + w * 8 + Math.cos(a) * 5, y: cy + Math.sin(a) * 15, z: Math.sin(a) * 0.8});
-    }
-  }
-  return pts;
-}
-
-function buildPerfection(cx, cy) {
-  const pts = [];
-  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 5, y: cy, z: 0});
-  // Loop A - larger
-  for (let i = 0; i <= 50; i++) {
-    const a = (i/50) * Math.PI * 2;
-    pts.push({x: cx - 40 + Math.cos(a) * 35, y: cy + Math.sin(a) * 35, z: Math.sin(a) * 0.9});
-  }
-  // Loop B - smaller, in front
-  for (let i = 0; i <= 40; i++) {
-    const a = (i/40) * Math.PI * 2;
-    pts.push({x: cx + 5 + Math.cos(a) * 22, y: cy + Math.sin(a) * 22, z: -Math.sin(a) * 0.8 + 0.2});
-  }
-  // Tag through
-  for (let i = 0; i <= 20; i++) {
-    const t = i/20;
-    pts.push({x: cx - 5 + t * 15, y: cy - 55 + t * 60, z: -0.5 + t * 0.8});
-  }
-  // Standing line right
-  for (let i = 0; i <= 20; i++) pts.push({x: cx + 30 + i * 5, y: cy, z: 0});
-  return pts;
-}
-
-function buildBlood(cx, cy) {
-  const pts = [];
-  // Left line
-  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 4, y: cy, z: 0});
-  // Left wraps
-  for (let w = 0; w < 5; w++) {
-    for (let i = 0; i <= 20; i++) {
-      const a = (i/20) * Math.PI * 2;
-      pts.push({x: cx - 50 + w * 12 + Math.cos(a) * 5, y: cy + Math.sin(a) * 20, z: Math.sin(a)});
-    }
-  }
-  // Tag through center
-  for (let i = 0; i <= 15; i++) {
-    const t = i / 15;
-    pts.push({x: cx - 10 + t * 20, y: cy, z: -0.8 + t * 1.6});
-  }
-  // Right wraps
-  for (let w = 0; w < 5; w++) {
-    for (let i = 0; i <= 20; i++) {
-      const a = (i/20) * Math.PI * 2;
-      pts.push({x: cx + 10 + w * 12 + Math.cos(a) * 5, y: cy + Math.sin(a) * 20, z: -Math.sin(a)});
-    }
-  }
-  // Right line
-  for (let i = 0; i <= 20; i++) pts.push({x: cx + 80 + i * 4, y: cy, z: 0});
-  return pts;
-}
-
-function buildNail(cx, cy) {
-  const pts = [];
-  // Thick fly line
-  for (let i = 0; i <= 30; i++) pts.push({x: 20 + i * 5, y: cy, z: 0});
-  // Wraps
-  for (let w = 0; w < 7; w++) {
-    for (let i = 0; i <= 16; i++) {
-      const a = (i/16) * Math.PI * 2;
-      pts.push({x: cx - 40 + w * 12 + Math.cos(a) * 4, y: cy + Math.sin(a) * 16, z: Math.sin(a)});
-    }
-  }
-  // Leader exits right
-  for (let i = 0; i <= 30; i++) pts.push({x: cx + 55 + i * 5, y: cy, z: 0.5});
-  return pts;
-}
-
-function buildDavy(cx, cy) {
-  const pts = [];
-  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 4, y: cy, z: 0});
-  // Hook eye
-  for (let i = 0; i <= 30; i++) {
-    const a = (i/30) * Math.PI * 2 - Math.PI/2;
-    pts.push({x: cx + 20 + Math.cos(a) * 16, y: cy + Math.sin(a) * 16, z: Math.sin(a) * 0.5});
-  }
-  // Single loop over
-  for (let i = 0; i <= 25; i++) {
-    const a = (i/25) * Math.PI;
-    pts.push({x: cx + 10 + Math.cos(a) * 30, y: cy - Math.sin(a) * 28, z: Math.sin(a) * 0.9});
-  }
-  // Back through
-  for (let i = 0; i <= 15; i++) {
-    const t = i/15;
-    pts.push({x: cx - 10 + t * 30, y: cy + 5 - t * 10, z: -0.5 + t * 0.8});
-  }
-  // Tag end
-  for (let i = 0; i <= 10; i++) pts.push({x: cx + 40 + i * 4, y: cy + 15, z: 0.2});
-  return pts;
-}
-
-function buildArbor(cx, cy) {
-  const pts = [];
-  // Reel arbor (drawn as background, just show wraps)
-  // Main line coming off reel
-  for (let i = 0; i <= 20; i++) pts.push({x: 20 + i * 4, y: cy, z: 0});
-  // Wrap around arbor
-  for (let i = 0; i <= 50; i++) {
-    const a = (i/50) * Math.PI * 2 * 1.5;
-    const r = 30 - i * 0.2;
-    pts.push({x: cx - 30 + Math.cos(a) * r, y: cy + Math.sin(a) * r, z: Math.sin(a)});
-  }
-  // Overhand knot 1
-  for (let i = 0; i <= 30; i++) {
-    const a = (i/30) * Math.PI * 2;
-    pts.push({x: cx + 30 + Math.cos(a) * 18, y: cy + Math.sin(a) * 18, z: Math.sin(a) * 0.8});
-  }
-  // Stopper knot
-  for (let i = 0; i <= 20; i++) {
-    const a = (i/20) * Math.PI * 2;
-    pts.push({x: cx + 65 + Math.cos(a) * 10, y: cy + Math.sin(a) * 10, z: Math.sin(a) * 0.6});
-  }
-  // Tag end
-  for (let i = 0; i <= 10; i++) pts.push({x: cx + 85 + i * 4, y: cy, z: 0.2});
-  return pts;
 }
 
 // ═══════════════════════════════════════════════════════════
