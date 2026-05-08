@@ -1390,6 +1390,22 @@
       Kalama
       <span class="tab-sub">Headwaters → Columbia</span>
     </button>
+    <button class="river-tab" onclick="switchRiver('skykomish')">
+      Skykomish
+      <span class="tab-sub">Index → Monroe</span>
+    </button>
+    <button class="river-tab" onclick="switchRiver('wenatchee')">
+      Wenatchee
+      <span class="tab-sub">Leavenworth → Columbia</span>
+    </button>
+    <button class="river-tab" onclick="switchRiver('greenRiver')">
+      Green River
+      <span class="tab-sub">Hanson Dam → Auburn</span>
+    </button>
+    <button class="river-tab" onclick="switchRiver('stillaguamish')">
+      Stillaguamish
+      <span class="tab-sub">North Fork → Arlington</span>
+    </button>
   </nav>
 
   <!-- Condition Banner -->
@@ -1424,6 +1440,11 @@
       <div class="stat-label">Air Temp</div>
       <div class="stat-value"><span class="skeleton" id="airtemp-val">--</span><span class="stat-unit">°F</span></div>
       <div class="stat-delta" id="airtemp-note">Loading…</div>
+    </div>
+    <div class="stat-card" id="card-baro">
+      <div class="stat-label">Barometric Pressure</div>
+      <div class="stat-value"><span class="skeleton" id="baro-val">--</span><span class="stat-unit">inHg</span></div>
+      <div class="stat-delta" id="baro-note">Loading…</div>
     </div>
     <div class="stat-card" id="card-temp" style="grid-column:1/-1">
       <div class="stat-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -1551,6 +1572,10 @@
           <option value="Klickitat River">Klickitat River</option>
           <option value="Cowlitz River">Cowlitz River</option>
           <option value="Kalama River">Kalama River</option>
+          <option value="Skykomish River">Skykomish River</option>
+          <option value="Wenatchee River">Wenatchee River</option>
+          <option value="Green River">Green River</option>
+          <option value="Stillaguamish">Stillaguamish</option>
           <option value="Other">Other</option>
         </select>
       </div>
@@ -1611,6 +1636,10 @@
         <option value="klickitat">Klickitat River</option>
         <option value="cowlitz">Cowlitz River</option>
         <option value="kalama">Kalama River</option>
+        <option value="skykomish">Skykomish River</option>
+        <option value="wenatchee">Wenatchee River</option>
+        <option value="greenRiver">Green River</option>
+        <option value="stillaguamish">Stillaguamish</option>
       </select>
     </div>
     <div class="regs-content" id="regs-content"></div>
@@ -1995,7 +2024,85 @@ const RIVERS = {
     accessLabel: 'Access Points — Kalama River',
     aiContext: 'the Kalama River in southwest Washington (coastal river flowing into the Columbia, wild steelhead and trout, rain-dominated SW Washington climate, mix of hatchery and wild fish)',
     insightTip: 'One or two tips specific to the Kalama (coastal rain-driven flows, wild vs hatchery fish regulations, winter steelhead timing, SW Washington weather)',
+  },  greenRiver: {
+    id:'greenRiver', label:'Green River', sublabel:'Howard Hanson → Auburn',
+    usgs:'12113000', gaugeName:'Auburn gauge', lat:47.3298, lon:-122.2298,
+    wadingThresholds:{easy:400,moderate:900,difficult:1800,floatOnly:3000},
+    hatches:[
+      {name:'Blue-Wing Olive',icon:'🪰',when:[1,2,3,4,10,11,12],detail:'Year-round Baetis on overcast days. #18-22.'},
+      {name:'Caddis',icon:'🦋',when:[4,5,6,7,8,9],detail:'Strong caddis spring through fall.'},
+      {name:'Steelhead Flies',icon:'🎣',when:[10,11,12,1,2,3],detail:'Winter steelhead Oct-March. Egg flies, nymphs, wets.'},
+    ],
+    accessPoints:[
+      {name:'Flaming Geyser State Park',detail:'Mid river. Good cutthroat water. State park fee.',tags:['Wading','State Park']},
+      {name:'Kanaskat-Palmer State Park',detail:'Upper river. Wild trout water above dam.',tags:['Wading','Camping']},
+      {name:'Auburn Riverbend Park',detail:'Lower river wade access. Parking available.',tags:['Wading','Parking']},
+    ],
+    hatchLabel:'Hatches — Green River', accessLabel:'Access — Green River',
+    aiContext:'the Green River in Washington state (Howard Hanson Dam to Auburn/Duwamish, wild trout above dam, steelhead and salmon below)',
+    insightTip:'How dam releases affect flow and fishing, upper wild trout vs lower steelhead water',
   },
+  skykomish: {
+    id:'skykomish', label:'Skykomish River', sublabel:'Index → Monroe',
+    usgs:'12134500', gaugeName:'Gold Bar gauge', lat:47.8526, lon:-121.6915,
+    wadingThresholds:{easy:800,moderate:2000,difficult:4000,floatOnly:7000},
+    hatches:[
+      {name:'Blue-Wing Olive',icon:'🪰',when:[1,2,3,4,10,11,12],detail:'Strong Baetis fall and spring. #18-22.'},
+      {name:'Salmonfly',icon:'🦗',when:[5,6],detail:'Good salmonfly hatch on forks in May-June.'},
+      {name:'Caddis',icon:'🦋',when:[5,6,7,8],detail:'Heavy evening caddis hatches all summer.'},
+      {name:'Terrestrials',icon:'🐜',when:[7,8,9],detail:'Hoppers and ants in summer along grassy banks.'},
+      {name:'Steelhead Flies',icon:'🎣',when:[10,11,12,1,2,3],detail:'World-class winter steelhead fishery.'},
+    ],
+    accessPoints:[
+      {name:'Index Town Wall Pullout',detail:'Upper Sky near Index. Technical wading at higher flows.',tags:['Wading','Drive-to']},
+      {name:'Big Eddy / Reiter Rd',detail:'Popular steelhead hole. Good access.',tags:['Wading','Steelhead']},
+      {name:'Wallace River Confluence',detail:'Salmon Falls area. Good holding water.',tags:['Wading','Drive-to']},
+      {name:'Monroe / US-2 Pullouts',detail:'Lower river. Multiple informal pullouts along US-2.',tags:['Wading','Informal']},
+    ],
+    hatchLabel:'Hatches — Skykomish River', accessLabel:'Access — Index to Monroe',
+    aiContext:'the Skykomish River in Washington (world-class wild winter steelhead, excellent summer dry fly on forks, flows from Stevens Pass area to Monroe)',
+    insightTip:'Tips on forks vs mainstem, Gold Bar gauge height translation to wading conditions',
+  },
+  wenatchee: {
+    id:'wenatchee', label:'Wenatchee River', sublabel:'Leavenworth → Columbia',
+    usgs:'12462500', gaugeName:'Peshastin gauge', lat:47.5898, lon:-120.6199,
+    wadingThresholds:{easy:600,moderate:1400,difficult:2500,floatOnly:4000},
+    hatches:[
+      {name:'Skwala Stonefly',icon:'🪲',when:[3,4],detail:'Good Skwala hatch in March-April.'},
+      {name:'Blue-Wing Olive',icon:'🪰',when:[1,2,3,4,10,11,12],detail:'Baetis on overcast days. Best fall and spring.'},
+      {name:'Salmonfly',icon:'🦗',when:[5,6],detail:'Good salmonfly hatch May-June near Leavenworth.'},
+      {name:'Golden Stonefly',icon:'🌟',when:[6,7],detail:'Golden stones follow the salmonfly in June-July.'},
+      {name:'Terrestrials',icon:'🐜',when:[7,8,9],detail:'Excellent hopper fishing in the Leavenworth corridor.'},
+      {name:'October Caddis',icon:'🍂',when:[9,10,11],detail:'Great fall caddis hatch. #8-10 orange patterns.'},
+    ],
+    accessPoints:[
+      {name:'Leavenworth Area Pullouts',detail:'Multiple pullouts along US-2. Excellent summer dry fly water.',tags:['Wading','Drive-to','Parking']},
+      {name:'Tumwater Canyon',detail:'Above Leavenworth on US-2. Technical pocket water.',tags:['Wading','Canyon','Drive-to']},
+      {name:'Monitor / Cashmere Area',detail:'Below Leavenworth. Flatter water, less pressure.',tags:['Wading','Drive-to']},
+    ],
+    hatchLabel:'Hatches — Wenatchee River', accessLabel:'Access — Leavenworth to Columbia',
+    aiContext:'the Wenatchee River in central Washington (freestone through Leavenworth, excellent dry fly river, good hatches, flows to the Columbia at Wenatchee)',
+    insightTip:'Tumwater Canyon technical pocket water vs open Leavenworth valley, snowmelt timing for peak fishing',
+  },
+  stillaguamish: {
+    id:'stillaguamish', label:'Stillaguamish', sublabel:'North Fork → Arlington',
+    usgs:'12167000', gaugeName:'Arlington gauge', lat:48.1898, lon:-121.9543,
+    wadingThresholds:{easy:600,moderate:1500,difficult:3000,floatOnly:5000},
+    hatches:[
+      {name:'Blue-Wing Olive',icon:'🪰',when:[1,2,3,4,10,11,12],detail:'Year-round Baetis. Best fall and spring.'},
+      {name:'Caddis',icon:'🦋',when:[5,6,7,8],detail:'Summer caddis on both forks.'},
+      {name:'Steelhead Flies',icon:'🎣',when:[10,11,12,1,2,3],detail:'North Fork Stilly — legendary wild steelhead river.'},
+    ],
+    accessPoints:[
+      {name:'North Fork via Cicero Rd',detail:'Wild steelhead water. Walk-in for best stretches.',tags:['Wading','Walk-in','Steelhead']},
+      {name:'South Fork at Granite Falls',detail:'Good trout water. Less pressure than North Fork.',tags:['Wading','Drive-to','Trout']},
+      {name:'Arlington Mainstem',detail:'Lower river. Steelhead staging water in fall.',tags:['Wading','Drive-to','Steelhead']},
+    ],
+    hatchLabel:'Hatches — Stillaguamish', accessLabel:'Access — North Fork to Arlington',
+    aiContext:'the Stillaguamish River in NW Washington (North Fork famous for wild winter steelhead, South Fork good trout water, rain-dominated coastal river)',
+    insightTip:'North Fork Stilly wild fish regulations, walk-in access, best steelhead timing vs South Fork trout fishing',
+  },
+
 };
 
 let activeRiver = RIVERS.upperYakima;
@@ -2057,6 +2164,9 @@ function switchRiver(riverId) {
 
   // Reset insights
   document.getElementById('insights-content').innerHTML = '<div class="insights-loading"><div class="spinner"></div><span>Generating conditions report…</span></div>';
+  // Reset baro
+  const bEl = document.getElementById('baro-val'); if(bEl){bEl.textContent='--';bEl.classList.add('skeleton');}
+  const bNt = document.getElementById('baro-note'); if(bNt) bNt.textContent='Loading…';
 
   loadAll();
 }
@@ -2178,7 +2288,7 @@ async function fetchUSGS(riverId) {
 
 // ─── WEATHER ──────────────────────────────────────────────
 async function fetchWeather(riverId) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${activeRiver.lat}&longitude=${activeRiver.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=America%2FLos_Angeles&forecast_days=7`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${activeRiver.lat}&longitude=${activeRiver.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&hourly=surface_pressure&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=America%2FLos_Angeles&forecast_days=7`;
   const res = await fetch(url);
   const json = await res.json();
 
@@ -2194,6 +2304,22 @@ async function fetchWeather(riverId) {
   document.getElementById('card-airtemp').classList.add('loaded');
   const wind = curr.windspeed;
   document.getElementById('airtemp-note').textContent = `Wind ${Math.round(wind)} mph · ${curr.is_day ? 'Daytime' : 'Nighttime'}`;
+  // Barometric pressure
+  try {
+    const pArr = json.hourly && json.hourly.surface_pressure;
+    if (pArr && pArr.length) {
+      const hIdx = Math.min(new Date().getHours(), pArr.length - 1);
+      const hPa = pArr[hIdx];
+      const inHg = (hPa * 0.02953).toFixed(2);
+      const baroEl = document.getElementById('baro-val');
+      const baroNote = document.getElementById('baro-note');
+      if (baroEl) { baroEl.textContent = inHg; baroEl.classList.remove('skeleton'); }
+      const diff = hPa - (pArr[Math.max(0, hIdx - 3)] || hPa);
+      if (baroNote) baroNote.textContent = diff > 2 ? '↗ Rising — fish active' : diff < -2 ? '↘ Falling — fish going deep' : '→ Steady';
+      const baroCard = document.getElementById('card-baro');
+      if (baroCard) baroCard.classList.add('loaded');
+    }
+  } catch(e) {}
 
   renderForecast(json.daily);
   updateConditionBanner();
@@ -2949,6 +3075,196 @@ function renderShops() {
     </div>
   `).join('');
 }
+
+// ═════════════════════════════════════════════════════════
+// SHOPS
+// ═════════════════════════════════════════════════════════
+const SHOPS = [
+  { name:'The Evening Hatch', location:'Ellensburg, WA', rivers:'Yakima River & Canyon — THE local expert', tags:['Guided','Gear','Flies','Lessons'], website:'https://www.eveninghatch.com', phone:'(509) 962-5959' },
+  { name:"Red's Fly Shop", location:'Winthrop, WA', rivers:'Methow, Okanogan — north Cascades expert', tags:['Guided','Gear','Flies','Lodging'], website:'https://www.redsflyshop.com', phone:'(509) 997-3900' },
+  { name:'Worley Bugger Fly Co.', location:'Ellensburg, WA', rivers:'Upper Yakima, Canyon — full service', tags:['Gear','Flies','Classes','Repairs'], website:'https://www.worleybugger.com', phone:'(509) 962-2033' },
+  { name:'Creekside Angling', location:'Issaquah, WA', rivers:'Snoqualmie, Cedar, statewide', tags:['Guided','Gear','Flies','Classes'], website:'https://www.creeksideangling.com', phone:'(425) 392-3800' },
+  { name:"Patrick's Fly Shop", location:'Seattle, WA', rivers:'All WA rivers — oldest shop in Seattle', tags:['Gear','Flies','Classes','Reports'], website:'https://www.patricksflyfishing.com', phone:'(206) 325-8988' },
+  { name:'Avid Angler', location:'Lake Forest Park, WA', rivers:'Puget Sound rivers, statewide', tags:['Guided','Gear','Flies','Classes'], website:'https://www.avidangler.com', phone:'(206) 362-4030' },
+  { name:'The Spotted Frog', location:'Yakima, WA', rivers:'Yakima Canyon, Naches — local knowledge', tags:['Guided','Gear','Flies'], website:'https://spottedfroglyfishing.com', phone:'(509) 225-0909' },
+  { name:'Confluence Fly Shop', location:'Hood River, OR', rivers:'Klickitat, Deschutes, Columbia Gorge', tags:['Guided','Gear','Flies','Shuttles'], website:'https://www.confluenceflyshop.com', phone:'(541) 386-6002' },
+  { name:"Kaufmann's Streamborn", location:'Tigard, OR', rivers:'All PNW rivers — legendary catalog', tags:['Gear','Flies','Books','Mail Order'], website:'https://www.kman.com', phone:'(800) 442-4359' },
+  { name:"Swede's Fly Shop", location:'Randle, WA', rivers:'Cowlitz River — upper Cowlitz expert', tags:['Guided','Gear','Flies','Intel'], website:'https://www.swedesflyfishing.com', phone:'(360) 497-7397' },
+];
+
+function renderShops() {
+  const grid = document.getElementById('shop-grid');
+  if (grid.children.length > 0) return;
+  grid.innerHTML = SHOPS.map(s => `
+    <div class="shop-card">
+      <div class="shop-name">${s.name}</div>
+      <div class="shop-location">📍 ${s.location}</div>
+      <div class="shop-rivers">${s.rivers}</div>
+      <div class="shop-tags">${s.tags.map(t => `<span class="shop-tag">${t}</span>`).join('')}</div>
+      <div class="shop-links">
+        <a href="${s.website}" target="_blank" class="shop-link">Website ↗</a>
+        <a href="tel:${s.phone.replace(/[^0-9]/g,'')}" class="shop-link">📞 Call</a>
+      </div>
+    </div>`).join('');
+}
+
+// ═════════════════════════════════════════════════════════
+// REGULATIONS
+// ═════════════════════════════════════════════════════════
+const REGS = {
+  upperYakima: {
+    season: 'Open year-round',
+    rules: ['Single, barbless hooks only','Maximum 3 flies','All trout catch-and-release','No bait — artificial only','No fishing from floating devices (most sections)','Selective gear rules — check WDFW boundary maps'],
+    species: ['Wild rainbow trout (release all)','Cutthroat trout (release all)','Whitefish (limited retention — verify)'],
+    notes: ['Blue Ribbon fishery — Easton Dam to Roza Dam','Check WDFW annually — rules can change','eRegulations.com has current year details'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  yakimaCanyon: {
+    season: 'Open year-round',
+    rules: ['Single, barbless hooks only','Maximum 3 flies','All trout catch-and-release','No bait — artificial only','Selective gear rules throughout canyon'],
+    species: ['Wild rainbow trout (release all)','Cutthroat trout (release all)','Whitefish (check current regs)'],
+    notes: ['Roza Dam to Roza Bridge — verify boundary','BLM land provides public access','Some sections closed during spawning'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  naches: {
+    season: 'Varies by section — check WDFW',
+    rules: ['Rules vary significantly by section','Selective gear on some portions','Some sections allow bait — verify before fishing'],
+    species: ['Rainbow trout','Cutthroat trout','Brown trout (some sections)'],
+    notes: ['Irrigation diversions affect summer flows','Check WDFW boundary maps carefully'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  snoqualmie: {
+    season: 'Middle Fork — check WDFW (varies)',
+    rules: ['Wild fish regs — release all wild fish','Emergency closures possible — check regularly','Artificial lures required on most sections'],
+    species: ['Wild rainbow trout','Wild cutthroat trout','Bull trout (fully protected — immediate release)','Steelhead (check season)'],
+    notes: ['Bull trout present — fully protected species','Snoqualmie Falls is a key boundary','Handle all wild fish with care — quick release'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  methow: {
+    season: 'Open year-round on main stem (trout)',
+    rules: ['Wild trout — catch and release recommended','Selective gear rules on portions','Steelhead rules when in season'],
+    species: ['Wild rainbow trout','Cutthroat trout','Bull trout (protected)','Steelhead (check run/season)'],
+    notes: ['Some rules coordinated with Okanogan Tribe','Summer flows very low — fish early/late'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  okanogan: {
+    season: 'Check carefully — tribal land portions',
+    rules: ['State regs on non-tribal sections','Tribal permit required near Omak','Colville Confederated Tribes regulations apply near Omak'],
+    species: ['Rainbow trout','Cutthroat trout','Steelhead (check timing)','Salmon (check season)'],
+    notes: ['⚠️ Portions near Omak require Colville tribal permit','Fall steelhead can be excellent — check predictions'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.colvilletribes.com/fishing-and-hunting.php',
+  },
+  klickitat: {
+    season: 'Open year-round for trout — steelhead varies',
+    rules: ['Wild steelhead — release only','Hatchery steelhead — check retention','Selective gear on portions'],
+    species: ['Wild rainbow trout','Summer steelhead (June–Sept)','Winter steelhead (check timing)','Salmon (check season)'],
+    notes: ['Lyle Falls is a key boundary','Canyon terrain — technical wading required'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  cowlitz: {
+    season: 'Upper (above Cowlitz Falls Dam) open most of year',
+    rules: ['Above dam — selective gear, C&R wild trout','Below dam — steelhead/salmon rules apply','Hatchery fish may be retained — check marks'],
+    species: ['Wild rainbow trout (upper — release)','Wild cutthroat','Steelhead (lower)','Chinook/coho salmon (lower)'],
+    notes: ['Cowlitz Falls Dam = key boundary — very different rules each side','Packwood area best for fly fishing wild trout'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  kalama: {
+    season: 'Open year-round — steelhead Oct–March',
+    rules: ['Wild steelhead — release only','Hatchery steelhead — check adipose clip','Barbless hooks required on most sections'],
+    species: ['Wild rainbow trout','Winter steelhead (Oct–March)','Summer steelhead (Aug–Sept)','Salmon (check season)'],
+    notes: ['Always clip-check before retaining steelhead','Kalama Falls Hatchery — crowded in winter'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  skykomish: {
+    season: 'Open year-round most sections — check WDFW',
+    rules: ['Wild steelhead — release only','Hatchery steelhead — check adipose clip','Selective gear on many sections','Check seasonal closures during spawning'],
+    species: ['Wild rainbow/steelhead (release)','Hatchery steelhead (check season)','Chinook/coho salmon (check season)','Wild cutthroat trout'],
+    notes: ['Sky forks excellent wild trout water','Main stem world-class steelhead river','Access from US-2 corridor — multiple public pullouts'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  wenatchee: {
+    season: 'Open year-round on main stem — check WDFW',
+    rules: ['Selective gear rules on portions','Wild trout — C&R recommended','Check Tumwater Canyon boundary carefully'],
+    species: ['Wild rainbow trout','Cutthroat trout','Steelhead (check season)','Salmon (check season near confluence)'],
+    notes: ['Leavenworth area excellent dry fly water all summer','Tumwater Canyon — check special regulations'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  greenRiver: {
+    season: 'Varies significantly above/below Howard Hanson Dam',
+    rules: ['Above dam — wild trout regs, artificial only on most sections','Below dam — steelhead/salmon rules apply','Check WDFW boundary carefully'],
+    species: ['Wild rainbow/cutthroat (above dam)','Steelhead (below dam — check season)','Chinook/coho salmon (below dam)'],
+    notes: ['Very different fisheries above vs below Howard Hanson Dam','Upper river — wild trout, less pressure','Lower river — popular steelhead/salmon destination'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+  stillaguamish: {
+    season: 'Varies by section and species — check WDFW',
+    rules: ['Wild steelhead — release only on most sections','Selective gear on portions','Check tribal/state boundary carefully','Some sections permanently closed'],
+    species: ['Wild rainbow/steelhead (mostly release)','Hatchery steelhead (check section)','Chinook/coho salmon (check season)','Cutthroat trout'],
+    notes: ['North Fork Stilly — legendary wild steelhead fishery','South Fork — good trout water, less pressure','Tribal co-management — check boundaries'],
+    wdfw: 'https://wdfw.wa.gov/fishing/regulations', eRegs: 'https://www.eregulations.com/washington/fishing',
+  },
+};
+
+function renderRegs() {
+  const riverId = document.getElementById('regs-river-select').value;
+  const r = REGS[riverId];
+  const container = document.getElementById('regs-content');
+  if (!r) { container.innerHTML = '<div style="color:var(--muted);padding:20px 0;font-size:0.85rem">Select a river above to view regulations.</div>'; return; }
+  container.innerHTML = `
+    <div class="reg-card"><div class="reg-card-title">📅 Season</div><ul><li>${r.season}</li></ul></div>
+    <div class="reg-card"><div class="reg-card-title">📋 Rules</div><ul>${r.rules.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+    <div class="reg-card"><div class="reg-card-title">🐟 Species</div><ul>${r.species.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+    <div class="reg-card"><div class="reg-card-title">📝 Notes</div><ul>${r.notes.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+    <div style="grid-column:1/-1;display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+      <a href="${r.wdfw}" target="_blank" class="shop-link">WDFW Official Regs ↗</a>
+      <a href="${r.eRegs}" target="_blank" class="shop-link">eRegulations.com ↗</a>
+    </div>`;
+}
+
+// ═════════════════════════════════════════════════════════
+// CALCULATOR
+// ═════════════════════════════════════════════════════════
+function calcLeader() {
+  const len = parseFloat(document.getElementById('leader-length').value);
+  const tippet = document.getElementById('leader-tippet').value;
+  const clarity = document.getElementById('leader-clarity').value;
+  const tX = parseInt(tippet);
+  const tLen = clarity==='gin' ? len*0.35 : clarity==='clear' ? len*0.25 : len*0.18;
+  const mLen = len*0.18;
+  const bLen = len - tLen - mLen;
+  const dias = ['.011"','.010"','.009"','.008"','.007"','.006"','.005"','.004"'];
+  const bX = Math.max(0,tX-4), mX = Math.max(0,tX-2);
+  const el = document.getElementById('leader-result');
+  if(el) el.innerHTML = `
+    <div class="leader-result-row"><span class="lbl">Butt (${bX}X / ${dias[bX]||''})</span><span class="val">${bLen.toFixed(1)} ft</span></div>
+    <div class="leader-result-row"><span class="lbl">Mid (${mX}X)</span><span class="val">${mLen.toFixed(1)} ft</span></div>
+    <div class="leader-result-row"><span class="lbl">Tippet (${tippet} / ${dias[tX]||''})</span><span class="val">${tLen.toFixed(1)} ft</span></div>
+    <div class="leader-result-row"><span class="lbl">Total</span><span class="val">${len} ft</span></div>`;
+}
+function calcHook() {
+  const size = parseInt(document.getElementById('hook-size').value);
+  const tm = {2:'0X',4:'0X',6:'1X',8:'2X',10:'2X-3X',12:'3X',14:'3X-4X',16:'4X-5X',18:'5X',20:'5X-6X',22:'6X',24:'6X-7X'};
+  const um = {2:'Streamers',4:'Large streamers',6:'Buggers',8:'Hoppers',10:"Hare's ears",12:'Caddis, nymph',14:'PMD, BWO',16:'Small dries',18:'Midge dries',20:'Micro-midges',22:'Tiny midges',24:'Extreme conditions'};
+  const el = document.getElementById('hook-result');
+  if(el) el.innerHTML = `
+    <div class="leader-result-row"><span class="lbl">Hook Size</span><span class="val">#${size}</span></div>
+    <div class="leader-result-row"><span class="lbl">Tippet</span><span class="val">${tm[size]||'4X-5X'}</span></div>
+    <div class="leader-result-row"><span class="lbl">Use</span><span class="val" style="font-size:0.65rem">${um[size]||'General dry'}</span></div>`;
+}
+function calcWeight() {
+  const type = document.getElementById('weight-type').value;
+  const depth = document.getElementById('weight-depth').value;
+  const wi = {BB:{weight:'0.39g',diameter:'4.1mm',note:'Heavy — fast/deep'},AB:{weight:'0.28g',diameter:'3.7mm',note:'Medium-heavy'},'1':{weight:'0.20g',diameter:'3.3mm',note:'Medium'},'4':{weight:'0.12g',diameter:'2.7mm',note:'Standard nymphing'},'6':{weight:'0.06g',diameter:'2.2mm',note:'Light — shallow'},'7':{weight:'0.04g',diameter:'1.9mm',note:'Very light'}};
+  const di = {shallow:'Light or none — let fly sink naturally',medium:'Standard — most productive',deep:'Add shot — get in zone fast',vdeep:'Heavy shot + weighted fly'};
+  const w = wi[type];
+  const el = document.getElementById('weight-result');
+  if(el && w) el.innerHTML = `
+    <div class="leader-result-row"><span class="lbl">Weight</span><span class="val">${w.weight}</span></div>
+    <div class="leader-result-row"><span class="lbl">Diameter</span><span class="val">${w.diameter}</span></div>
+    <div class="leader-result-row"><span class="lbl">Best For</span><span class="val" style="font-size:0.65rem">${w.note}</span></div>
+    <div class="leader-result-row"><span class="lbl">Depth Tip</span><span class="val" style="font-size:0.6rem;max-width:160px;text-align:right">${di[depth]}</span></div>`;
+}
+
 </script>
 </body>
 </html>
