@@ -1228,7 +1228,7 @@
   #site-search-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:8px 12px;border-radius:2px;outline:none;flex:1;min-width:180px}
   #site-search-input:focus{border-color:var(--accent)}
   #site-search-input::placeholder{color:var(--muted)}
-  #site-results{margin-top:8px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:2px;background:var(--surface2)}
+  #site-results{margin-top:8px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:2px;background:var(--surface2);display:none}
   .site-result-item{padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s}
   .site-result-item:hover{background:rgba(125,211,252,0.07)}
   .site-result-name{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text)}
@@ -1346,7 +1346,7 @@
         <option value="WI">Wisconsin</option>
         <option value="WY">Wyoming</option>
       </select>
-      <input type="text" id="site-search-input" placeholder="Type river name to filter…" oninput="filterSites()" autocomplete="off">
+      <input type="text" id="site-search-input" placeholder="Select a state first…" oninput="filterSites()" autocomplete="off" disabled>
     </div>
     <span id="site-search-status"></span>
     <div id="site-results"></div>
@@ -2740,88 +2740,137 @@ function renderMoonPhase() {
 }
 
 // ─── NATIONWIDE RIVER SEARCH ──────────────────────────────
+// ─── NATIONWIDE RIVER SEARCH ───────────────────────────
 let allSites = [], searchTimer = null;
+
+function parseUSGSRdb(text) {
+  const rawLines = text.split('\n');
+  let headers = null, formatSkipped = false;
+  const sites = [];
+  for (const line of rawLines) {
+    if (!line || line.startsWith('#')) continue;
+    const cols = line.split('\t');
+    if (!headers) { headers = cols.map(h => h.trim().toLowerCase()); continue; }
+    if (!formatSkipped) { formatSkipped = true; continue; }
+    const get = n => { const i = headers.indexOf(n); return i >= 0 ? (cols[i]||'').trim() : ''; };
+    const id = get('site_no'), name = get('station_nm');
+    const lat = parseFloat(get('dec_lat_va')), lon = parseFloat(get('dec_long_va'));
+    if (id && name && id.length >= 8 && !isNaN(lat) && !isNaN(lon)) sites.push({id,name,lat,lon});
+  }
+  return sites;
+}
 
 async function onStatePick() {
   const state = document.getElementById('state-picker').value;
   const status = document.getElementById('site-search-status');
   const results = document.getElementById('site-results');
   const input = document.getElementById('site-search-input');
-  if (!state) return;
-  allSites = []; results.innerHTML = ''; input.value = '';
-  input.placeholder = 'Loading gauges\u2026';
-  input.disabled = true;
-  status.textContent = '\u23f3 Loading gauges for ' + state + '\u2026';
+  if (!state) { input.disabled = true; input.placeholder = 'Select a state first…'; return; }
+  allSites = [];
+  results.style.display = 'none'; results.innerHTML = '';
+  input.value = ''; input.placeholder = 'Loading gauges…'; input.disabled = true;
+  status.textContent = '⏳ Loading gauges for ' + state + '…';
   try {
-    const url = `https://yakima-proxy.ljlukelj.workers.dev/sites?state=${state}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    allSites = text.split('\n')
-      .filter(l => l && !l.startsWith('#') && !l.startsWith('agency') && !l.startsWith('5s') && l.includes('\t'))
-      .map(l => { const c = l.split('\t'); return { id: c[1], name: c[2], lat: c[4], lon: c[5] }; })
-      .filter(s => s.id && s.name && s.id.length >= 8);
-    status.textContent = allSites.length + ' active gauges — type to filter';
+    const res = await fetch('https://yakima-proxy.ljlukelj.workers.dev/sites?state=' + state);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allSites = parseUSGSRdb(await res.text());
+    if (!allSites.length) {
+      status.textContent = 'No gauges found — try another state';
+      input.placeholder = 'No gauges available';
+    } else {
+      status.textContent = allSites.length.toLocaleString() + ' active gauges — type to search';
+      input.placeholder = 'Search by river or gauge name…';
+      input.disabled = false;
+      input.focus();
+    }
   } catch(e) {
+    status.textContent = 'Error: ' + e.message;
+    input.placeholder = 'Search by river or gauge name…';
     input.disabled = false;
-    input.placeholder = 'Type river name to filter\u2026';
-    status.textContent = '\u274c Error loading gauges. Check connection and try again.';
     console.error('Sites fetch error:', e);
   }
 }
 
 function filterSites() {
   clearTimeout(searchTimer);
+  const results = document.getElementById('site-results');
+  const q = document.getElementById('site-search-input').value.toLowerCase().trim();
+  if (!q) { results.style.display = 'none'; results.innerHTML = ''; return; }
   searchTimer = setTimeout(() => {
-    const q = document.getElementById('site-search-input').value.toLowerCase().trim();
-    const results = document.getElementById('site-results');
-    if (!q || !allSites.length) { results.innerHTML = ''; return; }
-    const hits = allSites.filter(s => s.name.toLowerCase().includes(q)).slice(0, 50);
-    if (!hits.length) { results.innerHTML = '<div class="site-result-item"><div class="site-result-name" style="color:var(--muted)">No matches</div></div>'; return; }
-    results.innerHTML = hits.map(function(s) {
-      var n = s.name.replace(/'/g, '&#39;');
-      var lat = parseFloat(s.lat).toFixed(3);
-      return '<div class="site-result-item" onclick="loadCustomRiver(\"' + s.id + '\",\"' + n + '\",' + s.lat + ',' + s.lon + ')">' +
+    if (!allSites.length) return;
+    const hits = allSites.filter(s => s.name.toLowerCase().includes(q)).slice(0, 60);
+    if (!hits.length) {
+      results.innerHTML = '<div class="site-result-item"><div class="site-result-name" style="color:var(--muted)">No matches — try a different spelling</div></div>';
+      results.style.display = 'block'; return;
+    }
+    window._siteHits = hits;
+    results.innerHTML = hits.map(function(s, i) {
+      return '<div class="site-result-item" data-hit-idx="' + i + '">' +
         '<div class="site-result-name">' + s.name + '</div>' +
-        '<div class="site-result-id">USGS #' + s.id + ' &middot; ' + lat + 'N</div></div>';
+        '<div class="site-result-id">USGS #' + s.id + ' · ' + s.lat.toFixed(3) + '°N ' + Math.abs(s.lon).toFixed(3) + '°W</div></div>';
     }).join('');
-  }, 200);
+    results.querySelectorAll('.site-result-item[data-hit-idx]').forEach(el => {
+      el.addEventListener('click', function() {
+        const hit = window._siteHits[parseInt(this.dataset.hitIdx)];
+        if (hit) loadCustomRiver(hit.id, hit.name, hit.lat, hit.lon);
+      });
+    });
+    results.style.display = 'block';
+  }, 180);
 }
 
+document.addEventListener('click', function(e) {
+  const box = document.querySelector('.river-search-box');
+  if (box && !box.contains(e.target)) {
+    const r = document.getElementById('site-results');
+    if (r) r.style.display = 'none';
+  }
+});
+
 function loadCustomRiver(siteId, siteName, lat, lon) {
-  document.getElementById('site-results').innerHTML = '';
+  document.getElementById('site-results').style.display = 'none';
   document.getElementById('site-search-input').value = siteName;
-  document.getElementById('site-search-status').textContent = 'Loaded: ' + siteName;
+  document.getElementById('site-search-status').textContent = '✓ ' + siteName + ' (USGS #' + siteId + ')';
   document.querySelectorAll('.river-tab').forEach(b => b.classList.remove('active'));
+  const parts = siteName.split(' ').filter(Boolean);
+  const titleMain = parts.slice(0, -1).join(' ');
+  const titleEm   = parts[parts.length - 1] || siteName;
   activeRiver = {
     id: 'custom_' + siteId, label: siteName, sublabel: 'USGS #' + siteId,
     usgs: siteId, gaugeName: siteName,
     lat: parseFloat(lat), lon: parseFloat(lon),
-    wadingThresholds: { easy:500, moderate:1200, difficult:2500, floatOnly:4000 },
+    wadingThresholds: {easy:500,moderate:1200,difficult:2500,floatOnly:4000},
     hatches: [], accessPoints: [],
     hatchLabel: 'Hatches — ' + siteName,
-    accessLabel: 'Access — ' + siteName,
-    aiContext: siteName + ' (USGS #' + siteId + ')',
-    insightTip: 'Any seasonal patterns, typical fish species, or notable access information for this gauge location',
+    accessLabel: 'Access Points — ' + siteName,
+    aiContext: siteName + ', USGS gauge #' + siteId,
+    insightTip: 'Seasonal patterns, target species, wading thresholds, and notable local knowledge for this gauge and watershed',
   };
-  const parts = siteName.split(' ');
-  document.getElementById('river-title').innerHTML = parts.slice(0,-1).join(' ') + ' <em>' + parts[parts.length-1] + '</em>';
-  document.getElementById('river-subtitle').innerHTML = '🎣 ' + siteName + ' &nbsp;&middot;&nbsp; USGS #' + siteId;
-  document.getElementById('gauge-label').textContent = 'USGS #' + siteId;
+  document.getElementById('river-title').innerHTML = (titleMain ? titleMain + ' ' : '') + '<em>' + titleEm + '</em>';
+  document.getElementById('river-subtitle').innerHTML = '&#x1F3A3; ' + siteName + ' &nbsp;&middot;&nbsp; USGS #' + siteId;
+  document.getElementById('gauge-label').textContent = 'USGS #' + siteId + ' · ' + siteName;
   document.getElementById('hatch-label').textContent = 'Hatches — ' + siteName;
-  document.getElementById('access-label').textContent = 'Access — ' + siteName;
+  document.getElementById('access-label').textContent = 'Access Points — ' + siteName;
   document.getElementById('gage-note').textContent = siteName;
   document.getElementById('airtemp-note').textContent = siteName;
-  document.getElementById('footer-gauge').textContent = 'Flow: USGS #' + siteId;
+  document.getElementById('footer-gauge').textContent = 'Flow data: USGS #' + siteId + ' (' + siteName + ')';
   document.title = siteName + ' — DriftScout';
-  flowData=[]; currentFlow=null; currentGage=null; currentWaterTemp=null; airTemp=null;
+  flowData=[]; currentFlow=null; currentGage=null; currentWaterTemp=null; airTemp=null; weatherData=null;
   ['flow-val','gage-val','wtemp-val','airtemp-val'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.textContent = '—'; el.classList.add('skeleton'); }
   });
-  document.getElementById('rig-setups').innerHTML = '<div style="color:var(--muted);font-size:0.8rem">asking Claude…</div>';
-  document.getElementById('insights-content').innerHTML = '<div class="insights-loading"><div class="spinner"></div><span>Generating report…</span></div>';
-  document.getElementById('hatch-grid').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:8px 0">Hatch data available for preset PNW rivers.</div>';
-  document.getElementById('access-list').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:8px 0">Access points available for preset PNW rivers.</div>';
+  const bEl = document.getElementById('baro-val'); if(bEl){bEl.textContent='--';bEl.classList.add('skeleton');}
+  const bNt = document.getElementById('baro-note'); if(bNt) bNt.textContent='Loading…';
+  const wtEst = document.getElementById('wtemp-est-wrap'); if(wtEst) wtEst.style.display='none';
+  document.getElementById('condition-banner').className = 'condition-banner loading';
+  document.getElementById('condition-status').textContent = 'Fetching…';
+  document.getElementById('condition-summary').textContent = 'Loading river data from USGS…';
+  document.getElementById('rig-setups').innerHTML = '<div style="color:var(--muted);font-size:0.8rem;font-family:\'IBM Plex Mono\',monospace">asking Claude…</div>';
+  document.getElementById('insights-content').innerHTML = '<div class="insights-loading"><div class="spinner"></div><span>Generating conditions report…</span></div>';
+  document.getElementById('hatch-grid').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:12px 0;font-family:\'IBM Plex Mono\',monospace">Hatch calendar available for preset PNW rivers. AI insights below will cover local patterns.</div>';
+  document.getElementById('access-list').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:12px 0;font-family:\'IBM Plex Mono\',monospace">Access point data available for preset PNW rivers.</div>';
+  document.getElementById('forecast-row').innerHTML = '';
   const snap = activeRiver.id;
   Promise.all([fetchUSGS(snap), fetchWeather(snap)]).then(() => {
     if (activeRiver.id === snap) { fetchWaterTemp(snap); generateInsights(snap); }
